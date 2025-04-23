@@ -329,6 +329,8 @@
       }
 
       .chart-row {
+        position: relative;
+        /* Positioning context for the peak badge */
         display: grid;
         /* Mobile: Art, Rank/Change, Title/Artist/Stats */
         grid-template-columns: 40px 3rem 1fr;
@@ -472,6 +474,8 @@
         /* Use flex for mobile */
         justify-content: space-between;
         /* Distribute items */
+        align-items: center;
+        /* Vertically align items */
         font-size: 0.75rem;
         color: #6b7280;
         margin-top: 0.25rem;
@@ -489,10 +493,30 @@
         margin-left: 0.15rem;
       }
 
-      /* Hide plays and peak indicator on mobile */
-      .list-plays,
-      .peak-indicator {
+      /* Hide plays on mobile */
+      .list-plays {
         display: none;
+      }
+
+      /* Peak indicator specific styles */
+      .peak-indicator {
+        margin-left: 0.25rem;
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: #f59e0b;
+        background-color: #fffbeb;
+        padding: 0.1rem 0.3rem;
+        border-radius: 0.25rem;
+        display: inline-flex;
+        align-items: center;
+      }
+
+      /* Mobile absolute positioning for the badge */
+      .peak-indicator-mobile {
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+        z-index: 1;
       }
 
       /* Desktop layout for Title/Artist/Stats */
@@ -525,19 +549,6 @@
         }
 
         /* Show plays */
-        .peak-indicator {
-          display: inline-flex;
-          /* Show peak indicator */
-          margin-left: 0.5rem;
-          font-size: 0.75rem;
-          font-weight: 700;
-          color: #f59e0b;
-          background-color: #fffbeb;
-          padding: 0.1rem 0.4rem;
-          border-radius: 0.25rem;
-          align-items: center;
-        }
-
         /* Desktop specific cols */
         .list-peak-info {
           display: block;
@@ -558,6 +569,19 @@
           font-size: 0.9rem;
           color: #4b5563;
         }
+
+        /* Revert peak indicator positioning for desktop */
+        .peak-indicator {
+          position: static;
+          margin-left: 0.5rem;
+          font-size: 0.75rem;
+        }
+
+        .peak-indicator-mobile {
+          display: none;
+        }
+
+        /* Hide mobile badge on desktop */
       }
 
 
@@ -587,7 +611,7 @@
         font-size: 0.8rem;
       }
 
-      /* Smaller for star */
+      /* Smaller for star/RE */
 
       /* Details & Artist Card Container */
       #detailsDisplayArea {
@@ -2419,8 +2443,6 @@
             }
           });
           listData.sort((a, b) => a.rank - b.rank);
-          // No need to pad with empty rows for this view
-          // while (listData.length < 100 && listData.length > 0) { listData.push({ key: "-", name: "-", rank: listData.length + 1, plays: "-", status: null, peak: "-", peakStatus: null, weeksOnChart: 0, artistName: null, playPercentChange: null, albumMbid: null, lastWeekRank: null }); }
           return listData;
         }
 
@@ -2460,9 +2482,10 @@
               statusIndicator = '★';
               statusClass = 'list-change-new';
             } else if (item.status === 'RE-ENTRY') {
-              statusIndicator = '★';
+              statusIndicator = 'RE';
               statusClass = 'list-change-re';
-            } else if (typeof item.status === 'number') {
+            } // Changed to RE
+            else if (typeof item.status === 'number') {
               if (item.status > 0) {
                 statusIndicator = `<span>▲</span> ${item.status}`;
                 statusClass = 'list-change-up';
@@ -2477,6 +2500,20 @@
               statusIndicator = '-';
               statusClass = 'list-change-same';
             }
+
+            // --- Peak Indicator --- (Generate HTML once, conditionally add classes)
+            let peakIndicatorText = '';
+            if (item.peakStatus === 'PEAK') peakIndicatorText = '▲ Peak';
+            else if (item.peakStatus === 'RE-PEAK')
+              peakIndicatorText = '▲ Re-Peak'; // Corrected text
+
+            // Generate HTML for both mobile and desktop, using Tailwind visibility classes
+            const desktopPeakIndicatorHTML = peakIndicatorText
+              ? `<span class="peak-indicator hidden sm:inline-flex">${peakIndicatorText}</span>`
+              : '';
+            const mobilePeakIndicatorHTML = peakIndicatorText
+              ? `<span class="peak-indicator peak-indicator-mobile sm:hidden">${peakIndicatorText}</span>`
+              : '';
 
             const peakDisplay =
               typeof item.peak === 'number' && item.peak <= 100
@@ -2512,7 +2549,6 @@
             }
 
             // --- Construct innerHTML with conditional classes for mobile/desktop ---
-            // Updated secondary stats for mobile
             li.innerHTML = `
                         ${imageHTML}
 
@@ -2532,7 +2568,7 @@
                                 }
                                 <span class="list-plays hidden sm:inline">Plays: ${
                                   item.plays
-                                }</span>
+                                } ${desktopPeakIndicatorHTML}</span>
                             </div>
                             <div class="list-secondary-stats sm:hidden">
                                 <span>${lastWeekDisplay}<span class="stat-label">LW</span></span>
@@ -2551,6 +2587,8 @@
                         </div>
 
                         <div class="list-weeks hidden sm:block">${weeksDisplay}</div>
+
+                        ${mobilePeakIndicatorHTML}
                     `;
             container.appendChild(li);
           });
