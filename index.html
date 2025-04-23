@@ -1,0 +1,2647 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Music Billboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      /* Base styles */
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: #f9fafb; /* Lighter gray background */
+        min-height: 100vh;
+      }
+      /* Container styling */
+      .content-wrapper {
+        width: 95%;
+        max-width: 1100px;
+        margin: 1.5rem auto;
+        background-color: white;
+        padding: 1.5rem 2rem;
+        border-radius: 0.75rem;
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1),
+          0 2px 4px -2px rgb(0 0 0 / 0.1);
+        border: 1px solid #e5e7eb;
+      }
+      .list-container-wrapper {
+        padding: 0; /* Remove padding here, add to list */
+      }
+      .chart-container {
+        height: 60vh;
+        position: relative;
+        display: none;
+        padding: 1.5rem;
+      }
+      #top100ListContainer {
+        display: none;
+        min-height: 60vh;
+        padding-top: 0.5rem;
+      } /* Add padding top */
+
+      /* Settings Section */
+      #settingsSection {
+        display: none;
+        max-width: 600px;
+        margin: 1.5rem auto;
+      }
+      #settingsSection h3 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        text-align: center;
+      }
+      .setting-item {
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+      }
+      .setting-item label {
+        font-weight: 500;
+        color: #374151;
+        flex-shrink: 0;
+      }
+      .setting-item .input-group {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+      }
+      .setting-item input[type='number'],
+      .setting-item select {
+        padding: 0.4rem 0.6rem;
+        border-radius: 0.375rem;
+        border: 1px solid #d1d5db;
+        background-color: white;
+        max-width: 100px;
+      }
+      .settings-actions {
+        margin-top: 1.5rem;
+        text-align: right;
+      }
+
+      /* Drop Zone */
+      #dropZone {
+        border: 2px dashed #cbd5e1;
+        border-radius: 0.5rem;
+        padding: 2.5rem;
+        text-align: center;
+        cursor: pointer;
+        transition: background-color 0.3s ease, border-color 0.3s ease;
+      }
+      #dropZone:hover {
+        border-color: #9ca3af;
+      }
+      #dropZone.dragover {
+        background-color: #eef2ff;
+        border-color: #a5b4fc;
+      }
+      #status {
+        margin-top: 1rem;
+        font-style: italic;
+        color: #64748b;
+        min-height: 1.5em;
+      }
+
+      /* Buttons & Inputs - Refined */
+      button,
+      .button {
+        background-color: #4f46e5;
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 0.375rem;
+        border: none;
+        cursor: pointer;
+        transition: background-color 0.3s ease, transform 0.1s ease,
+          box-shadow 0.2s ease;
+        margin: 0.25rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 500;
+        box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      }
+      button:hover,
+      .button:hover {
+        background-color: #4338ca;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1),
+          0 2px 4px -2px rgb(0 0 0 / 0.1);
+      }
+      button:active,
+      .button:active {
+        transform: translateY(0px);
+        box-shadow: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+      }
+      button:disabled,
+      .button:disabled {
+        background-color: #a5b4fc;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+        opacity: 0.7;
+      }
+      select,
+      input[type='date'],
+      input[type='text'] {
+        padding: 0.5rem 0.75rem;
+        border-radius: 0.375rem;
+        border: 1px solid #d1d5db;
+        margin: 0.25rem;
+        background-color: white;
+        box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      }
+      input[type='date'] {
+        height: calc(1rem + 1rem + 2px);
+      } /* Match button height */
+
+      /* Search & Suggestions */
+      #searchContainer {
+        position: relative;
+        margin: 0 auto 1rem auto;
+        max-width: 500px;
+      }
+      #searchInput {
+        width: 100%;
+      }
+      #suggestions {
+        position: absolute;
+        background-color: white;
+        border: 1px solid #e5e7eb;
+        border-top: none;
+        border-radius: 0 0 0.5rem 0.5rem;
+        width: 100%;
+        max-height: 300px; /* Increased height */
+        overflow-y: auto;
+        z-index: 10;
+        box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1),
+          0 4px 6px -4px rgb(0 0 0 / 0.1);
+      }
+      #suggestions div {
+        padding: 0.6rem 0.8rem;
+        cursor: pointer;
+        font-size: 0.9rem;
+      }
+      #suggestions div:hover {
+        background-color: #f3f4f6;
+      }
+      .suggestion-type {
+        font-weight: 600;
+        color: #4f46e5;
+        margin-right: 0.5rem;
+        font-size: 0.8rem;
+      }
+      .suggestion-artist {
+        color: #6b7280;
+        font-size: 0.85rem;
+        margin-left: 0.3rem;
+      }
+
+      /* Controls Area */
+      .controls-area {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+        gap: 0.75rem 1.5rem;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #e5e7eb;
+      }
+
+      /* List Headers */
+      .list-header {
+        display: grid;
+        grid-template-columns: 3.5rem 48px 1fr 5rem 3.5rem 4rem;
+        gap: 0.75rem;
+        padding: 0.5rem 1rem;
+        border-bottom: 2px solid #e5e7eb;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        background-color: #f9fafb; /* Light sticky header */
+        position: sticky;
+        top: 0;
+        z-index: 5;
+      }
+      .list-header > div {
+        text-align: center;
+      }
+      .list-header > div:nth-child(3) {
+        text-align: left;
+        margin-left: 1rem;
+      }
+
+      /* Top 100 List Styles */
+      .chart-row {
+        display: grid;
+        grid-template-columns: 3.5rem 48px 1fr 5rem 3.5rem 4rem;
+        gap: 0.75rem;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #f3f4f6;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+        min-height: 60px;
+      }
+      .chart-row:last-child {
+        border-bottom: none;
+      }
+      .chart-row:hover {
+        background-color: #f0f9ff;
+      }
+      .list-rank {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #374151;
+        text-align: center;
+      }
+      .list-image-container {
+        width: 48px;
+        height: 48px;
+        flex-shrink: 0;
+        border-radius: 0.25rem;
+        overflow: hidden;
+        background-color: #e5e7eb;
+      }
+      .list-image-placeholder {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #9ca3af;
+        font-size: 1.5rem;
+        font-weight: bold;
+      }
+      .list-image-container img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .list-details {
+        margin-left: 1rem;
+      }
+      .list-name {
+        font-weight: 600;
+        color: #111827;
+        display: block;
+        margin-bottom: 0;
+        line-height: 1.3;
+      }
+      .list-artist {
+        font-size: 0.85rem;
+        color: #6b7280;
+        display: block;
+        margin-bottom: 0.2rem;
+        line-height: 1.2;
+      }
+      .list-plays {
+        font-size: 0.8rem;
+        color: #a1a1aa;
+      }
+      .list-peak-info,
+      .list-change,
+      .list-weeks {
+        text-align: center;
+        font-size: 0.9rem;
+        color: #4b5563;
+      }
+      .list-peak-info span {
+        display: block;
+        font-size: 0.75rem;
+        color: #9ca3af;
+      }
+      .list-change span {
+        font-size: 1.1rem;
+        display: inline-block;
+        width: 1.2em;
+      }
+      .list-change-up {
+        color: #10b981;
+      }
+      .list-change-down {
+        color: #ef4444;
+      }
+      .list-change-same {
+        color: #6b7280;
+      }
+      .list-change-new,
+      .list-change-re {
+        color: #a855f7;
+        font-weight: bold;
+      }
+      .peak-indicator {
+        margin-left: 0.5rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #f59e0b;
+        background-color: #fffbeb;
+        padding: 0.1rem 0.4rem;
+        border-radius: 0.25rem;
+        display: inline-flex;
+        align-items: center;
+      }
+
+      /* Details & Artist Card Container */
+      #detailsDisplayArea {
+        display: none;
+        margin: 1rem auto 0 auto;
+        max-width: 1000px;
+        width: 90%;
+      }
+      #detailsInfoContainer,
+      #artistCardContainer,
+      #artistTopSongsContainer {
+        padding: 0.75rem 1rem;
+        margin-bottom: 0.5rem;
+        border-radius: 0.5rem;
+        font-size: 0.9rem;
+      }
+      #detailsInfoContainer {
+        background-color: #eef2ff;
+        border: 1px solid #c7d2fe;
+        color: #4338ca;
+        text-align: center;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.5rem 1.5rem;
+      }
+      #detailsInfoContainer span {
+      }
+      #artistCardContainer {
+        background-color: #f9fafb;
+        border: 1px solid #e5e7eb;
+        color: #374151;
+        cursor: pointer;
+        transition: background-color 0.2s ease, border-color 0.2s ease;
+        text-align: center;
+      }
+      #artistCardContainer:hover {
+        background-color: #f3f4f6;
+        border-color: #d1d5db;
+      }
+      #artistCardContainer strong {
+        color: #1f2937;
+      }
+      #artistCardContainer span {
+        margin: 0 0.75rem;
+      }
+      .clickable-week-date {
+        cursor: pointer;
+        text-decoration: underline;
+        color: #4f46e5;
+        font-weight: 600;
+      }
+      .clickable-week-date:hover {
+        color: #4338ca;
+      }
+      #currentWeekDisplay .clickable-week-date {
+        text-decoration: none;
+        color: inherit;
+        font-weight: normal;
+      }
+      #currentWeekDisplay .clickable-week-date:hover {
+        text-decoration: underline;
+        color: #4f46e5;
+      }
+
+      /* Artist Top Songs List */
+      #artistTopSongsContainer {
+        background-color: #f9fafb;
+        border: 1px solid #e5e7eb;
+        display: none;
+      }
+      #artistTopSongsContainer h4 {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: #1f2937;
+        text-align: center;
+      }
+      .artist-song-item {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 0.5rem 1rem;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #f3f4f6;
+        font-size: 0.85rem;
+      }
+      .artist-song-item:last-child {
+        border-bottom: none;
+      }
+      .artist-song-rank {
+        font-weight: 600;
+        text-align: right;
+        color: #4b5563;
+      }
+      .artist-song-name {
+        font-weight: 500;
+        color: #3b82f6;
+        cursor: pointer;
+        text-decoration: underline;
+      }
+      .artist-song-name:hover {
+        color: #2563eb;
+      }
+      .artist-song-plays {
+        color: #6b7280;
+        grid-column: 2;
+      }
+      .artist-song-peak-info {
+        text-align: right;
+        color: #6b7280;
+      }
+      .artist-song-peak-info .clickable-week-date {
+        font-weight: normal;
+      }
+
+      /* History View Controls */
+      #historyViewControls {
+        display: none;
+        text-align: center;
+        margin-bottom: 1rem;
+      }
+
+      /* Export & Preview Styles */
+      #exportContainer {
+        position: absolute;
+        left: -9999px;
+        top: auto;
+        width: 800px;
+        background: linear-gradient(to bottom, #e0f2fe, #bfdbfe);
+        padding: 40px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        min-height: 600px;
+        font-family: 'Inter', sans-serif;
+        font-size: 14px;
+      }
+      #exportContainer h3,
+      #previewHtmlContainer h3 {
+        text-align: center;
+        margin-bottom: 15px;
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #1e3a8a;
+      }
+      .export-grid-header,
+      .export-grid-row {
+        display: grid;
+        grid-template-columns: 35px 48px 40px 1fr 50px 50px 40px 40px;
+        gap: 0.5rem;
+        align-items: center;
+        width: 100%;
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 6px 5px;
+      }
+      .export-grid-header {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        font-size: 0.7rem;
+        border-bottom: 1px solid #ddd !important;
+        border-radius: 8px 8px 0 0;
+      }
+      .export-grid-row {
+        font-size: 0.75rem;
+        border-bottom: 1px solid #eee;
+        background-color: white;
+      }
+      #exportContainer .export-grid-row:last-child,
+      #previewHtmlContainer .export-grid-row:last-child {
+        border-bottom: none;
+        border-radius: 0 0 8px 8px;
+      }
+      .export-grid-header > div,
+      .export-grid-row > div {
+        text-align: center;
+      }
+      .export-grid-header > div:nth-child(4),
+      .export-grid-row > div:nth-child(4) {
+        text-align: left;
+      }
+      .export-grid-row .list-rank {
+        font-weight: 700;
+        font-size: 0.9rem;
+      }
+      .export-grid-row .list-name {
+        font-weight: 600;
+        color: #111827;
+        display: block;
+        margin-bottom: 0;
+        line-height: 1.2;
+        font-size: 0.8rem;
+      }
+      .export-grid-row .list-artist {
+        font-size: 0.7rem;
+        color: #6b7280;
+        display: block;
+        line-height: 1.1;
+      }
+      .export-grid-row .list-change span {
+        font-size: 0.75rem;
+      }
+      .export-grid-row .list-image-container {
+        width: 40px;
+        height: 40px;
+        margin: auto;
+        border-radius: 2px;
+        overflow: hidden;
+        background-color: #e5e7eb;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .export-grid-row .list-image-placeholder {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #9ca3af;
+        font-size: 1.2rem;
+        font-weight: bold;
+      }
+      .export-grid-row .list-image-container img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      #exportPreviewModal {
+        display: none;
+        position: fixed;
+        z-index: 100;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      .modal-content {
+        background-color: #fefefe;
+        margin: auto;
+        padding: 20px;
+        border: 1px solid #888;
+        width: 90%;
+        max-width: 850px;
+        border-radius: 8px;
+        text-align: center;
+      }
+      #previewHtmlContainer {
+        max-height: 70vh;
+        overflow-y: auto;
+        border: 1px solid #ccc;
+        padding: 15px;
+        margin-bottom: 15px;
+        background-color: #fff;
+      }
+      #previewHtmlContainer .export-grid-header,
+      #previewHtmlContainer .export-grid-row {
+        /* Styles inherited */
+      }
+      .modal-actions {
+        margin-top: 15px;
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+      }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="p-6 md:p-8">
+    <header class="text-center mb-10">
+      <h1 class="text-4xl font-bold text-gray-800">My Music Billboard</h1>
+      <p class="text-gray-600 mt-1">Visualize your listening history</p>
+    </header>
+
+    <main>
+      <section id="settingsSection" class="content-wrapper">
+        <h3>Settings</h3>
+        <div class="setting-item">
+          <label for="windowDurationInput">Ranking Window:</label>
+          <div class="input-group">
+            <input type="number" id="windowDurationInput" min="1" value="4" />
+            <select id="windowUnitSelect">
+              <option value="weeks" selected>Weeks</option>
+              <option value="months">Months</option>
+              <option value="years">Years</option>
+            </select>
+          </div>
+        </div>
+        <div class="setting-item">
+          <label for="exportCountInput">Export Image Count (1-100):</label>
+          <input
+            type="number"
+            id="exportCountInput"
+            min="1"
+            max="100"
+            value="15"
+          />
+        </div>
+        <div class="settings-actions">
+          <button id="applySettingsBtn" class="button">
+            Apply & Re-process
+          </button>
+          <button id="closeSettingsBtn" class="button">Close</button>
+        </div>
+      </section>
+
+      <section id="uploadSection" class="mb-10 max-w-xl content-wrapper">
+        <h2 class="text-xl font-semibold mb-5 text-gray-700">
+          Upload your Listening History CSV
+        </h2>
+        <div id="dropZone">
+          <p class="text-gray-500">
+            Drag & drop your CSV file here, or click to select
+          </p>
+          <input type="file" id="csvFileInput" accept=".csv" class="hidden" />
+        </div>
+        <div class="text-center mt-5">
+          <button id="uploadButton" class="button">Select CSV File</button>
+        </div>
+        <p id="status" class="text-center">No file selected.</p>
+      </section>
+
+      <section id="chartSection" class="hidden content-wrapper">
+        <div id="searchContainer">
+          <input
+            type="text"
+            id="searchInput"
+            placeholder="Search Track or Artist History..."
+          />
+          <div id="suggestions" class="hidden"></div>
+        </div>
+
+        <div class="controls-area">
+          <div>
+            <label
+              for="entityType"
+              class="mr-1 text-sm font-medium text-gray-700"
+              >Show List:</label
+            >
+            <select id="entityType">
+              <option value="track" selected>Top Tracks</option>
+              <option value="artist">Top Artists</option>
+            </select>
+          </div>
+          <div id="weekNavContainer" class="flex items-center">
+            <button id="prevWeekBtn" class="button" disabled>&lt; Prev</button>
+            <span
+              id="currentWeekDisplay"
+              class="mx-2 text-sm text-gray-700 whitespace-nowrap"
+              >Week: -</span
+            >
+            <button id="nextWeekBtn" class="button" disabled>Next &gt;</button>
+          </div>
+          <div id="jumpToWeekContainer" class="flex items-center">
+            <label
+              for="weekJumpInput"
+              class="mr-1 text-sm font-medium text-gray-700"
+              >Jump to:</label
+            >
+            <input type="date" id="weekJumpInput" />
+            <button id="jumpToWeekBtn" class="button ml-1">Go</button>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="exportImageBtn" class="button">Export Top N</button>
+            <button id="settingsBtn" class="button">Settings</button>
+          </div>
+        </div>
+
+        <div id="historyViewControls">
+          <button id="backToListBtn" class="button">
+            &larr; Back to Top List
+          </button>
+        </div>
+
+        <div id="detailsDisplayArea">
+          <div id="detailsInfoContainer"></div>
+          <div id="artistCardContainer"></div>
+          <div id="artistTopSongsContainer"></div>
+        </div>
+
+        <div class="list-container-wrapper">
+          <div class="chart-container">
+            <canvas id="billboardChart"></canvas>
+          </div>
+          <div id="listHeaderContainer" style="display: none"></div>
+          <div id="top100ListContainer"></div>
+        </div>
+        <div id="chartInfo" class="text-center text-gray-600 mt-3"></div>
+      </section>
+
+      <div id="exportPreviewModal" style="display: none">
+        <div class="modal-content">
+          <h4>Export Preview</h4>
+          <div id="previewHtmlContainer"></div>
+          <div class="modal-actions">
+            <button id="confirmExportBtn" class="button">
+              Generate Image & Download
+            </button>
+            <button id="cancelExportBtn" class="button">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@4.1.0/cdn.min.js"></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
+      integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const csvFileInput = document.getElementById('csvFileInput');
+        const uploadButton = document.getElementById('uploadButton');
+        const dropZone = document.getElementById('dropZone');
+        const statusDiv = document.getElementById('status');
+        const uploadSection = document.getElementById('uploadSection');
+        const chartSection = document.getElementById('chartSection');
+        const chartCanvas = document.getElementById('billboardChart');
+        const listContainer = document.getElementById('top100ListContainer');
+        const chartContainerDiv = chartCanvas.parentElement;
+        const chartInfo = document.getElementById('chartInfo');
+        const entityTypeSelect = document.getElementById('entityType');
+        /* History select removed */ const searchInput =
+          document.getElementById('searchInput');
+        const suggestionsDiv = document.getElementById('suggestions');
+        const prevWeekBtn = document.getElementById('prevWeekBtn');
+        const nextWeekBtn = document.getElementById('nextWeekBtn');
+        const currentWeekDisplay =
+          document.getElementById('currentWeekDisplay');
+        const weekNavContainer = document.getElementById('weekNavContainer');
+        const detailsDisplayArea =
+          document.getElementById('detailsDisplayArea');
+        const detailsInfoContainer = document.getElementById(
+          'detailsInfoContainer'
+        );
+        const artistCardContainer = document.getElementById(
+          'artistCardContainer'
+        );
+        const historyViewControls = document.getElementById(
+          'historyViewControls'
+        );
+        const backToListBtn = document.getElementById('backToListBtn');
+        const weekJumpInput = document.getElementById('weekJumpInput');
+        const jumpToWeekBtn = document.getElementById('jumpToWeekBtn');
+        const jumpToWeekContainer = document.getElementById(
+          'jumpToWeekContainer'
+        );
+        const artistTopSongsContainer = document.getElementById(
+          'artistTopSongsContainer'
+        );
+        const exportImageBtn = document.getElementById('exportImageBtn');
+        /* exportContainerBtn removed */
+        const listHeaderContainer = document.getElementById(
+          'listHeaderContainer'
+        );
+        const settingsSection = document.getElementById('settingsSection');
+        const settingsBtn = document.getElementById('settingsBtn');
+        const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+        const applySettingsBtn = document.getElementById('applySettingsBtn');
+        const windowDurationInput = document.getElementById(
+          'windowDurationInput'
+        );
+        const windowUnitSelect = document.getElementById('windowUnitSelect');
+        const exportCountInput = document.getElementById('exportCountInput');
+        // Modal Elements
+        const exportPreviewModal =
+          document.getElementById('exportPreviewModal');
+        const previewHtmlContainer = document.getElementById(
+          'previewHtmlContainer'
+        );
+        const confirmExportBtn = document.getElementById('confirmExportBtn');
+        const cancelExportBtn = document.getElementById('cancelExportBtn');
+
+        // --- Global Variables ---
+        let mainChartInstance = null;
+        let processedData = {
+          tracks: new Map(),
+          artists: new Map(),
+          allWeeks: [],
+          rawData: [],
+        };
+        let selectedHistoryEntity = { key: null, type: null }; // Store key and type ('track' or 'artist')
+        let currentWeekIndex = -1;
+        let slidingWindowWeeks = 4;
+        let exportCountN = 15;
+        let tempExportFilename = ''; // Store filename for confirmation
+
+        // --- Constants ---
+        const COMPOSITE_KEY_SEPARATOR = ' --- ';
+
+        // --- Date Helpers ---
+        function checkDateFns() {
+          if (
+            typeof dateFns === 'undefined' ||
+            !dateFns ||
+            typeof dateFns.format !== 'function'
+          ) {
+            console.error('date-fns v4 failed.');
+            throw new Error('Date library failed.');
+          }
+          return true;
+        }
+        function getWeekStartDate(date) {
+          checkDateFns();
+          return dateFns.startOfWeek(date, { weekStartsOn: 0 });
+        }
+        function formatDateKey(date) {
+          checkDateFns();
+          return date ? dateFns.format(date, 'yyyy-MM-dd') : null;
+        }
+        function formatDisplayDate(date) {
+          checkDateFns();
+          return date ? dateFns.format(date, 'yyyy-MM-dd') : 'N/A';
+        }
+
+        // --- Utility Functions ---
+        function hexToRgb(hex) {
+          const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+          return result
+            ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16),
+              }
+            : null;
+        }
+        function rgbToHex(r, g, b) {
+          return (
+            '#' +
+            ((1 << 24) + (r << 16) + (g << 8) + b)
+              .toString(16)
+              .slice(1)
+              .toUpperCase()
+          );
+        }
+        function interpolateColor(color1, color2, factor) {
+          factor = Math.max(0, Math.min(1, factor));
+          const rgb1 = hexToRgb(color1);
+          const rgb2 = hexToRgb(color2);
+          if (!rgb1 || !rgb2) return color1;
+          const r = Math.round(rgb1.r + factor * (rgb2.r - rgb1.r));
+          const g = Math.round(rgb1.g + factor * (rgb2.g - rgb1.g));
+          const b = Math.round(rgb1.b + factor * (rgb2.b - rgb1.b));
+          return rgbToHex(r, g, b);
+        }
+
+        // --- Event Listeners ---
+        setupEventListeners();
+
+        // --- Functions ---
+        function setupEventListeners() {
+          if (uploadButton)
+            uploadButton.addEventListener('click', () => csvFileInput.click());
+          if (dropZone) {
+            dropZone.addEventListener('click', () => csvFileInput.click());
+            dropZone.addEventListener('dragover', handleDragOver);
+            dropZone.addEventListener('dragleave', handleDragLeave);
+            dropZone.addEventListener('drop', handleDrop);
+          }
+          if (csvFileInput)
+            csvFileInput.addEventListener('change', handleFileSelect);
+          if (entityTypeSelect)
+            entityTypeSelect.addEventListener('change', handleEntityTypeChange); // Keep this to control default list view
+          if (searchInput) {
+            searchInput.addEventListener('input', handleSearchInput);
+            searchInput.addEventListener('blur', () =>
+              setTimeout(() => suggestionsDiv.classList.add('hidden'), 150)
+            );
+          }
+          if (suggestionsDiv)
+            suggestionsDiv.addEventListener('mousedown', handleSuggestionClick); // Use mousedown to fire before blur
+          if (prevWeekBtn)
+            prevWeekBtn.addEventListener('click', () => navigateWeek(-1));
+          if (nextWeekBtn)
+            nextWeekBtn.addEventListener('click', () => navigateWeek(1));
+          if (listContainer)
+            listContainer.addEventListener('click', handleListItemClick);
+          if (backToListBtn)
+            backToListBtn.addEventListener('click', handleBackButtonClick);
+          if (artistCardContainer)
+            artistCardContainer.addEventListener(
+              'click',
+              handleArtistCardClick
+            );
+          if (jumpToWeekBtn)
+            jumpToWeekBtn.addEventListener('click', handleJumpToWeek);
+          if (detailsInfoContainer)
+            detailsInfoContainer.addEventListener('click', handleWeekDateClick);
+          if (artistTopSongsContainer) {
+            artistTopSongsContainer.addEventListener(
+              'click',
+              handleWeekDateClick
+            );
+            artistTopSongsContainer.addEventListener(
+              'click',
+              handleArtistTopSongClick
+            );
+          }
+          if (weekNavContainer)
+            weekNavContainer.addEventListener('click', handleWeekDateClick);
+          if (exportImageBtn)
+            exportImageBtn.addEventListener('click', handleExportImageClick);
+          if (settingsBtn)
+            settingsBtn.addEventListener('click', () => {
+              settingsSection.style.display = 'block';
+              updateSettingsUI();
+            });
+          if (closeSettingsBtn)
+            closeSettingsBtn.addEventListener(
+              'click',
+              () => (settingsSection.style.display = 'none')
+            );
+          if (applySettingsBtn)
+            applySettingsBtn.addEventListener('click', handleApplySettings);
+          // Modal Listeners
+          if (cancelExportBtn)
+            cancelExportBtn.addEventListener('click', closeExportModal);
+          if (confirmExportBtn)
+            confirmExportBtn.addEventListener(
+              'click',
+              confirmAndDownloadExport
+            );
+        }
+
+        // --- Settings Functions ---
+        function updateSettingsUI() {
+          exportCountInput.value = exportCountN;
+          if (slidingWindowWeeks % 52 === 0 && slidingWindowWeeks > 0) {
+            windowDurationInput.value = slidingWindowWeeks / 52;
+            windowUnitSelect.value = 'years';
+          } else if (slidingWindowWeeks % 4 === 0 && slidingWindowWeeks > 0) {
+            windowDurationInput.value = slidingWindowWeeks / 4;
+            windowUnitSelect.value = 'months';
+          } else {
+            windowDurationInput.value = slidingWindowWeeks;
+            windowUnitSelect.value = 'weeks';
+          }
+        }
+        function handleApplySettings() {
+          const duration = parseInt(windowDurationInput.value, 10);
+          const unit = windowUnitSelect.value;
+          const newExportCount = parseInt(exportCountInput.value, 10);
+          if (
+            isNaN(newExportCount) ||
+            newExportCount < 1 ||
+            newExportCount > 100
+          ) {
+            updateStatus('Export count must be between 1 and 100.', true);
+            return;
+          }
+          if (isNaN(duration) || duration < 1) {
+            updateStatus('Window duration must be a positive number.', true);
+            return;
+          }
+          let newWindowWeeks;
+          if (unit === 'months') {
+            newWindowWeeks = duration * 4;
+          } else if (unit === 'years') {
+            newWindowWeeks = duration * 52;
+          } else {
+            newWindowWeeks = duration;
+          }
+          if (
+            processedData.allWeeks.length > 0 &&
+            newWindowWeeks > processedData.allWeeks.length
+          ) {
+            updateStatus(
+              `Window duration (${newWindowWeeks} weeks) cannot exceed available data range (${processedData.allWeeks.length} weeks).`,
+              true
+            );
+            return;
+          }
+          if (newWindowWeeks < 1) {
+            updateStatus('Window duration must be at least 1 week.', true);
+            return;
+          }
+          const settingsChanged =
+            newWindowWeeks !== slidingWindowWeeks ||
+            newExportCount !== exportCountN;
+          slidingWindowWeeks = newWindowWeeks;
+          exportCountN = newExportCount;
+          exportImageBtn.textContent = `Export Top ${exportCountN}`;
+          settingsSection.style.display = 'none';
+          if (settingsChanged && processedData.rawData.length > 0) {
+            updateStatus('Applying settings and re-processing...');
+            setTimeout(() => {
+              try {
+                processListeningData(processedData.rawData);
+                updateStatus('Settings applied successfully.');
+                currentWeekIndex = -1;
+                selectedHistoryEntity = { key: null, type: null };
+                updateChartOrList();
+              } catch (error) {
+                console.error(
+                  'Error re-processing data after settings change:',
+                  error
+                );
+                updateStatus(
+                  `Error applying settings: ${
+                    error.message || 'Unknown error'
+                  }.`,
+                  true
+                );
+              }
+            }, 10);
+          } else if (!settingsChanged) {
+            updateStatus('Settings unchanged.');
+          } else {
+            updateStatus('Settings saved. Upload data to see changes.', false);
+          }
+        }
+
+        // --- Event Handlers ---
+        function handleDragOver(event) {
+          event.preventDefault();
+          dropZone.classList.add('dragover');
+        }
+        function handleDragLeave() {
+          dropZone.classList.remove('dragover');
+        }
+        function handleDrop(event) {
+          event.preventDefault();
+          dropZone.classList.remove('dragover');
+          const file = event.dataTransfer.files[0];
+          if (file && file.type === 'text/csv') {
+            handleFile(file);
+          } else {
+            updateStatus('Please drop a CSV file.', true);
+          }
+        }
+        function handleFileSelect(event) {
+          const file = event.target.files[0];
+          if (file) {
+            handleFile(file);
+          }
+        }
+        function handleEntityTypeChange() {
+          if (!selectedHistoryEntity.key) {
+            updateChartOrList();
+          }
+        } // Only update list view
+
+        /** Handles search input - searches both tracks and artists */
+        function handleSearchInput(event) {
+          const query = event.target.value.toLowerCase().trim();
+          suggestionsDiv.innerHTML = '';
+          if (query.length < 1) {
+            suggestionsDiv.classList.add('hidden');
+            return;
+          }
+
+          const trackMatches = [];
+          processedData.tracks.forEach((data, key) => {
+            const displayName = data.trackName || key;
+            const artistName = data.artistName || 'Unknown Artist';
+            if (
+              displayName.toLowerCase().includes(query) ||
+              artistName.toLowerCase().includes(query)
+            ) {
+              trackMatches.push({
+                key: key,
+                type: 'track',
+                display: displayName,
+                artist: artistName,
+              });
+            }
+          });
+
+          const artistMatches = [];
+          processedData.artists.forEach((data, key) => {
+            const displayName = data.artistName || key;
+            if (displayName.toLowerCase().includes(query)) {
+              artistMatches.push({
+                key: key,
+                type: 'artist',
+                display: displayName,
+              });
+            }
+          });
+
+          let allMatches = [...trackMatches, ...artistMatches];
+
+          // Custom Sort Logic
+          allMatches.sort((a, b) => {
+            const aLower = a.display.toLowerCase();
+            const bLower = b.display.toLowerCase();
+            const queryLower = query;
+
+            // 1. Exact display name match (case-insensitive)
+            if (aLower === queryLower && bLower !== queryLower) return -1;
+            if (bLower === queryLower && aLower !== queryLower) return 1;
+
+            // 2. Exact artist name match (for artist results, case-insensitive)
+            const aIsExactArtist = a.type === 'artist' && aLower === queryLower;
+            const bIsExactArtist = b.type === 'artist' && bLower === queryLower;
+            if (aIsExactArtist && !bIsExactArtist) return -1;
+            if (bIsExactArtist && !aIsExactArtist) return 1;
+
+            // 3. Starts with query (case-insensitive)
+            const aStartsWith = aLower.startsWith(queryLower);
+            const bStartsWith = bLower.startsWith(queryLower);
+            if (aStartsWith && !bStartsWith) return -1;
+            if (bStartsWith && !aStartsWith) return 1;
+
+            // 4. Artist priority (slight boost if both contain but don't start)
+            if (!aStartsWith && !bStartsWith) {
+              if (a.type === 'artist' && b.type === 'track') return -1;
+              if (b.type === 'artist' && a.type === 'track') return 1;
+            }
+
+            // 5. Alphabetical fallback
+            return a.display.localeCompare(b.display);
+          });
+
+          if (allMatches.length > 0) {
+            // No slice limit anymore
+            allMatches.forEach((match) => {
+              const div = document.createElement('div');
+              div.dataset.key = match.key;
+              div.dataset.type = match.type; // Store type
+              let textHTML = '';
+              if (match.type === 'track') {
+                textHTML = `<span class="suggestion-type">[Track]</span> ${match.display} <span class="suggestion-artist">- ${match.artist}</span>`;
+              } else {
+                textHTML = `<span class="suggestion-type">[Artist]</span> ${match.display}`;
+              }
+              div.innerHTML = textHTML;
+              suggestionsDiv.appendChild(div);
+            });
+            suggestionsDiv.classList.remove('hidden');
+          } else {
+            suggestionsDiv.classList.add('hidden');
+          }
+        }
+
+        /** Handles clicking a search suggestion */
+        function handleSuggestionClick(event) {
+          const targetDiv = event.target.closest('div[data-key]');
+          if (targetDiv) {
+            const key = targetDiv.dataset.key;
+            const type = targetDiv.dataset.type; // Get type
+
+            if (key && type) {
+              selectedHistoryEntity = { key: key, type: type };
+              // Update the main toggle to reflect the selection for visual consistency
+              entityTypeSelect.value = type;
+              // Clear search bar and hide suggestions
+              searchInput.value = '';
+              suggestionsDiv.classList.add('hidden');
+              // Update the view
+              updateChartOrList();
+            }
+          }
+        }
+
+        /** Handles clicking an item in the main list */
+        function handleListItemClick(event) {
+          const listItem = event.target.closest('.chart-row[data-key]');
+          if (listItem) {
+            const key = listItem.dataset.key;
+            const type = entityTypeSelect.value; // Type is determined by the current list view
+            if (key && type && key !== '-') {
+              selectedHistoryEntity = { key: key, type: type };
+              searchInput.value = ''; // Clear search
+              updateChartOrList(); // Switch to history view
+            }
+          }
+        }
+
+        /** Handles clicking the "Back" button from history view */
+        function handleBackButtonClick() {
+          selectedHistoryEntity = { key: null, type: null }; // Clear selection
+          searchInput.value = '';
+          updateChartOrList(); // Renders list based on entityTypeSelect
+        }
+
+        /** Handles clicking the artist card in track history view */
+        function handleArtistCardClick(event) {
+          const artistKey = event.currentTarget.dataset.artistKey;
+          if (artistKey && processedData.artists.has(artistKey)) {
+            selectedHistoryEntity = { key: artistKey, type: 'artist' };
+            entityTypeSelect.value = 'artist'; // Update toggle
+            searchInput.value = '';
+            updateChartOrList();
+          } else {
+            console.warn('Could not find artist data for key:', artistKey);
+          }
+        }
+
+        /** Handles clicking a track from the artist's top songs list */
+        function handleArtistTopSongClick(event) {
+          const target = event.target.closest(
+            '.artist-song-name[data-track-key]'
+          );
+          if (target) {
+            event.stopPropagation();
+            const trackKey = target.dataset.trackKey;
+            if (trackKey && processedData.tracks.has(trackKey)) {
+              selectedHistoryEntity = { key: trackKey, type: 'track' };
+              entityTypeSelect.value = 'track'; // Update toggle
+              searchInput.value = '';
+              updateChartOrList();
+            }
+          }
+        }
+
+        // --- Other Handlers (JumpToWeek, WeekDateClick, NavigateWeek) ---
+        function handleJumpToWeek() {
+          const dateString = weekJumpInput.value;
+          if (!dateString) {
+            updateStatus('Please select a date.', true);
+            return;
+          }
+          if (
+            !checkDateFns() ||
+            !processedData.allWeeks ||
+            processedData.allWeeks.length === 0
+          ) {
+            updateStatus('Data not processed or date library error.', true);
+            return;
+          }
+          try {
+            const selectedDate = dateFns.parseISO(dateString + 'T00:00:00');
+            if (!dateFns.isValid(selectedDate)) {
+              updateStatus('Invalid date selected.', true);
+              return;
+            }
+            jumpToWeek(selectedDate);
+          } catch (error) {
+            console.error('Error jumping to week:', error);
+            updateStatus('Error processing selected date.', true);
+          }
+        }
+        function handleWeekDateClick(event) {
+          const target = event.target.closest('.clickable-week-date');
+          if (target && target.dataset.date) {
+            const dateString = target.dataset.date;
+            if (
+              !checkDateFns() ||
+              !processedData.allWeeks ||
+              processedData.allWeeks.length === 0
+            )
+              return;
+            try {
+              const selectedDate = dateFns.parseISO(dateString + 'T00:00:00');
+              if (!dateFns.isValid(selectedDate)) return;
+              jumpToWeek(selectedDate);
+            } catch (error) {
+              console.error('Error jumping to week from date click:', error);
+              updateStatus('Error processing clicked date.', true);
+            }
+          }
+        }
+        function navigateWeek(direction) {
+          if (!processedData.allWeeks || processedData.allWeeks.length === 0)
+            return;
+          const maxIndex = processedData.allWeeks.length - 1;
+          if (currentWeekIndex === -1) currentWeekIndex = maxIndex;
+          currentWeekIndex = Math.max(
+            0,
+            Math.min(maxIndex, currentWeekIndex + direction)
+          );
+          selectedHistoryEntity = { key: null, type: null };
+          searchInput.value = '';
+          updateChartOrList();
+        }
+        function jumpToWeek(selectedDate) {
+          const targetWeekStartDate = getWeekStartDate(selectedDate);
+          const targetIndex = processedData.allWeeks.findIndex((week) =>
+            dateFns.isSameDay(week, targetWeekStartDate)
+          );
+          if (targetIndex !== -1) {
+            currentWeekIndex = targetIndex;
+            selectedHistoryEntity = { key: null, type: null };
+            searchInput.value = '';
+            updateStatus('');
+            updateChartOrList();
+          } else {
+            const firstWeek = processedData.allWeeks[0];
+            const lastWeek =
+              processedData.allWeeks[processedData.allWeeks.length - 1];
+            updateStatus(
+              `Selected date is outside the available range (${formatDateKey(
+                firstWeek
+              )} to ${formatDateKey(lastWeek)}).`,
+              true
+            );
+          }
+        }
+
+        // Status Update Helper (Unchanged)
+        function updateStatus(message, isError = false) {
+          if (!statusDiv) return;
+          statusDiv.textContent = message;
+          statusDiv.classList[isError ? 'add' : 'remove']('text-red-500');
+        }
+
+        // --- File Handling and Parsing --- (Added try/catch in complete callback)
+        function handleFile(file) {
+          updateStatus(`Processing ${file.name}...`);
+          console.log('Starting file processing...');
+          resetState(); // Reset application state
+
+          if (
+            typeof Papa === 'undefined' ||
+            !Papa ||
+            typeof Papa.parse !== 'function'
+          ) {
+            updateStatus('Error: CSV parsing library failed.', true);
+            resetState();
+            return;
+          }
+          Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            dynamicTyping: { uts: true },
+            complete: (results) => {
+              console.log('CSV Parsing complete. Rows:', results.data.length);
+              if (results.errors.length > 0) {
+                updateStatus(
+                  `Error parsing CSV: ${results.errors[0].message}`,
+                  true
+                );
+                return;
+              }
+              if (!results.data.length) {
+                updateStatus('CSV file is empty or invalid.', true);
+                return;
+              }
+              const requiredColumns = [
+                'uts',
+                'artist',
+                'artist_mbid',
+                'track',
+                'track_mbid',
+                'album_mbid',
+              ];
+              const actualColumns = Object.keys(results.data[0] || {});
+              const missingColumns = requiredColumns.filter(
+                (col) => !actualColumns.includes(col)
+              );
+              if (missingColumns.length > 0) {
+                updateStatus(
+                  `Warning: Input CSV might be missing required columns (${missingColumns.join(
+                    ', '
+                  )}). Grouping/Art accuracy may be reduced.`,
+                  false
+                );
+              }
+
+              processedData.rawData = results.data; // Store raw data for re-processing
+              updateStatus('Processing data...');
+
+              // Use setTimeout to allow UI update before potentially long processing
+              setTimeout(() => {
+                try {
+                  // Add try...catch here
+                  console.log('Calling processListeningData...');
+                  processListeningData(processedData.rawData); // Initial processing
+                  console.log('processListeningData finished.');
+
+                  updateStatus(`Processed ${file.name}. Chart ready.`);
+                  if (uploadSection) uploadSection.classList.add('hidden');
+                  if (chartSection) chartSection.classList.remove('hidden');
+                  currentWeekIndex = -1; // Start at latest week
+                  selectedHistoryEntity = { key: null, type: null }; // Ensure history view is not shown
+                  // populateHistoryDropdown(); // Removed
+                  setDateInputRange();
+                  console.log(
+                    'Calling updateChartOrList after file processing...'
+                  );
+                  updateChartOrList();
+                  console.log('updateChartOrList finished.');
+                  updateSettingsUI(); // Set initial settings values
+                } catch (error) {
+                  console.error('Error during post-parse processing:', error);
+                  updateStatus(
+                    `Error processing data: ${
+                      error.message || 'Unknown error'
+                    }. Check console.`,
+                    true
+                  );
+                  resetState(); // Reset on error
+                }
+              }, 10);
+            },
+            error: (error) => {
+              updateStatus(`Error parsing file: ${error.message}`, true);
+              resetState();
+            },
+          });
+        }
+
+        // --- Reset State ---
+        function resetState() {
+          processedData = {
+            tracks: new Map(),
+            artists: new Map(),
+            allWeeks: [],
+            rawData: [],
+          };
+          if (mainChartInstance) {
+            mainChartInstance.destroy();
+            mainChartInstance = null;
+          }
+          if (chartSection) chartSection.classList.add('hidden');
+          if (uploadSection) uploadSection.classList.remove('hidden');
+          // History select removed
+          selectedHistoryEntity = { key: null, type: null }; // Reset history selection
+          currentWeekIndex = -1;
+          if (chartInfo) chartInfo.textContent = '';
+          updateStatus('No file selected.');
+          if (searchInput) searchInput.value = '';
+          if (suggestionsDiv) suggestionsDiv.classList.add('hidden');
+          if (listContainer) listContainer.innerHTML = '';
+          if (detailsDisplayArea) detailsDisplayArea.style.display = 'none';
+          if (historyViewControls) historyViewControls.style.display = 'none';
+          if (weekJumpInput) {
+            weekJumpInput.min = '';
+            weekJumpInput.max = '';
+            weekJumpInput.value = '';
+          }
+          if (artistTopSongsContainer)
+            artistTopSongsContainer.style.display = 'none';
+          slidingWindowWeeks = 4;
+          exportCountN = 15;
+          if (exportImageBtn)
+            exportImageBtn.textContent = `Export Top ${exportCountN}`;
+          if (settingsSection) settingsSection.style.display = 'none';
+          updateSettingsUI();
+        }
+
+        // --- Data Processing Logic --- (Ensure artistKey is stored on track details)
+        function processListeningData(data) {
+          console.log(
+            `Processing listening data (Window: ${slidingWindowWeeks} weeks)...`
+          );
+          processedData = {
+            tracks: new Map(),
+            artists: new Map(),
+            allWeeks: [],
+            rawData: data,
+          };
+          const weeklyCounts = new Map();
+          const entityDetails = { tracks: new Map(), artists: new Map() };
+          checkDateFns();
+          data.forEach((listen) => {
+            if (typeof listen.uts !== 'number' || isNaN(listen.uts)) return;
+            const listenDate = dateFns.fromUnixTime(listen.uts);
+            const weekStartDate = getWeekStartDate(listenDate);
+            const weekKey = formatDateKey(weekStartDate);
+            const trackName = (listen.track || '').trim();
+            const artistName = (listen.artist || '').trim();
+            const trackMbid = (listen.track_mbid || '').trim();
+            const artistMbid = (listen.artist_mbid || '').trim();
+            const albumMbid = (listen.album_mbid || '').trim();
+            if (!trackName || !artistName) return;
+            const artistKey = artistMbid || artistName;
+            const trackKey =
+              trackMbid || `${artistKey}${COMPOSITE_KEY_SEPARATOR}${trackName}`;
+            if (!weeklyCounts.has(weekKey))
+              weeklyCounts.set(weekKey, {
+                trackCounts: new Map(),
+                artistCounts: new Map(),
+              });
+            const weekData = weeklyCounts.get(weekKey);
+            weekData.trackCounts.set(
+              trackKey,
+              (weekData.trackCounts.get(trackKey) || 0) + 1
+            );
+            weekData.artistCounts.set(
+              artistKey,
+              (weekData.artistCounts.get(artistKey) || 0) + 1
+            );
+            // Store details, including the artistKey for the track
+            function updateEntityDetail(
+              map,
+              key,
+              tName,
+              aName,
+              albMbid,
+              artKey
+            ) {
+              // Added artKey
+              let detail = map.get(key);
+              if (!detail) {
+                detail = {
+                  trackName: tName,
+                  artistName: aName,
+                  albumMbid: albMbid,
+                  artistKey: artKey, // Store the artist key (MBID or name)
+                  totalPlays: 0,
+                  firstPlayDate: listenDate,
+                  lastPlayDate: listenDate,
+                };
+                map.set(key, detail);
+              }
+              detail.totalPlays += 1;
+              if (
+                !detail.firstPlayDate ||
+                dateFns.compareAsc(listenDate, detail.firstPlayDate) < 0
+              )
+                detail.firstPlayDate = listenDate;
+              if (
+                !detail.lastPlayDate ||
+                dateFns.compareAsc(listenDate, detail.lastPlayDate) > 0
+              )
+                detail.lastPlayDate = listenDate;
+              if (!detail.trackName && tName) detail.trackName = tName;
+              if (!detail.artistName && aName) detail.artistName = aName;
+              if (!detail.albumMbid && albMbid) detail.albumMbid = albMbid;
+              if (!detail.artistKey && artKey) detail.artistKey = artKey; // Ensure artistKey is set
+            }
+            updateEntityDetail(
+              entityDetails.tracks,
+              trackKey,
+              trackName,
+              artistName,
+              albumMbid,
+              artistKey
+            ); // Pass artistKey
+            updateEntityDetail(
+              entityDetails.artists,
+              artistKey,
+              null,
+              artistName,
+              null,
+              null
+            ); // Artist doesn't need artistKey stored on itself
+          });
+          console.log('Weekly counts & entity details calculated.');
+          processedData.allWeeks = Array.from(weeklyCounts.keys())
+            .map(dateFns.parseISO)
+            .sort((a, b) => dateFns.compareAsc(a, b));
+          if (processedData.allWeeks.length === 0)
+            throw new Error('No valid listening data found.');
+          const tempTrackHistory = new Map();
+          const tempArtistHistory = new Map();
+          processedData.allWeeks.forEach((currentWeekDate) => {
+            const windowTrackPlays = new Map();
+            const windowArtistPlays = new Map();
+            for (let i = 0; i < slidingWindowWeeks; i++) {
+              const weekInWindowDate = dateFns.subWeeks(currentWeekDate, i);
+              const weekInWindowKey = formatDateKey(weekInWindowDate);
+              if (weeklyCounts.has(weekInWindowKey)) {
+                const weekData = weeklyCounts.get(weekInWindowKey);
+                weekData.trackCounts.forEach((c, key) =>
+                  windowTrackPlays.set(
+                    key,
+                    (windowTrackPlays.get(key) || 0) + c
+                  )
+                );
+                weekData.artistCounts.forEach((c, key) =>
+                  windowArtistPlays.set(
+                    key,
+                    (windowArtistPlays.get(key) || 0) + c
+                  )
+                );
+              }
+            }
+            const rankedTracks = Array.from(windowTrackPlays.entries())
+              .sort(([, a], [, b]) => b - a)
+              .slice(0, 100);
+            rankedTracks.forEach(([key, plays], idx) => {
+              if (!tempTrackHistory.has(key)) tempTrackHistory.set(key, []);
+              tempTrackHistory
+                .get(key)
+                .push({
+                  week: currentWeekDate,
+                  rank: idx + 1,
+                  playsInWindow: plays,
+                });
+            });
+            const rankedArtists = Array.from(windowArtistPlays.entries())
+              .sort(([, a], [, b]) => b - a)
+              .slice(0, 100);
+            rankedArtists.forEach(([key, plays], idx) => {
+              if (!tempArtistHistory.has(key)) tempArtistHistory.set(key, []);
+              tempArtistHistory
+                .get(key)
+                .push({
+                  week: currentWeekDate,
+                  rank: idx + 1,
+                  playsInWindow: plays,
+                });
+            });
+          });
+          function calculateStatusPeakAndWeeks(
+            tempHistoryMap,
+            finalDataMap,
+            detailsMap
+          ) {
+            tempHistoryMap.forEach((history, key) => {
+              const finalHistory = [];
+              history.sort((a, b) => dateFns.compareAsc(a.week, b.week));
+              for (let i = 0; i < history.length; i++) {
+                const currentEntry = history[i];
+                let status = null;
+                let peakStatus = null;
+                let currentOverallPeak = 101;
+                let playPercentChange = null;
+                if (
+                  typeof currentEntry.rank !== 'number' ||
+                  isNaN(currentEntry.rank)
+                ) {
+                  console.warn(
+                    `Invalid rank for ${key} on ${formatDateKey(
+                      currentEntry.week
+                    )}`
+                  );
+                  currentOverallPeak =
+                    i > 0 && finalHistory[i - 1].peakPosition !== null
+                      ? finalHistory[i - 1].peakPosition
+                      : 101;
+                  finalHistory.push({
+                    ...currentEntry,
+                    status,
+                    peakPosition:
+                      currentOverallPeak <= 100 ? currentOverallPeak : null,
+                    peakStatus,
+                    weeksOnChart: i + 1,
+                    playPercentChange,
+                  });
+                  continue;
+                }
+                currentOverallPeak = history
+                  .slice(0, i + 1)
+                  .reduce((minPeak, entry) => {
+                    if (typeof entry.rank === 'number' && !isNaN(entry.rank)) {
+                      return Math.min(minPeak, entry.rank);
+                    }
+                    return minPeak;
+                  }, 101);
+                const prevFinalHistoryEntry =
+                  i > 0 ? finalHistory[i - 1] : null;
+                const prevOverallPeak = prevFinalHistoryEntry
+                  ? prevFinalHistoryEntry.peakPosition !== null
+                    ? prevFinalHistoryEntry.peakPosition
+                    : 101
+                  : 101;
+                const prevWeekDate = dateFns.subWeeks(currentEntry.week, 1);
+                const prevHistoryEntryOriginal = i > 0 ? history[i - 1] : null;
+                const wasRankedLastWeek =
+                  prevHistoryEntryOriginal &&
+                  dateFns.isSameDay(
+                    prevHistoryEntryOriginal.week,
+                    prevWeekDate
+                  );
+                const prevRank = wasRankedLastWeek
+                  ? prevHistoryEntryOriginal.rank
+                  : null;
+                const prevPlays = wasRankedLastWeek
+                  ? prevHistoryEntryOriginal.playsInWindow
+                  : null;
+                if (
+                  prevPlays !== null &&
+                  typeof currentEntry.playsInWindow === 'number'
+                ) {
+                  if (prevPlays > 0) {
+                    playPercentChange =
+                      ((currentEntry.playsInWindow - prevPlays) / prevPlays) *
+                      100;
+                  } else if (currentEntry.playsInWindow > 0) {
+                    playPercentChange = Infinity;
+                  } else {
+                    playPercentChange = 0;
+                  }
+                }
+                const isNewOverallPeak = currentOverallPeak < prevOverallPeak;
+                const isAtOverallPeak =
+                  currentEntry.rank === currentOverallPeak;
+                if (isAtOverallPeak) {
+                  if (isNewOverallPeak) {
+                    peakStatus = 'PEAK';
+                  } else {
+                    if (prevRank !== null && prevRank > currentEntry.rank) {
+                      peakStatus = 'RE-PEAK';
+                    }
+                  }
+                }
+                if (prevRank !== null) {
+                  status = prevRank - currentEntry.rank;
+                } else {
+                  const hasHistoryBeforePrevWeek = history
+                    .slice(0, i)
+                    .some((h) => dateFns.compareAsc(h.week, prevWeekDate) < 0);
+                  if (hasHistoryBeforePrevWeek) {
+                    status = 'RE-ENTRY';
+                  } else {
+                    status = 'NEW';
+                  }
+                }
+                finalHistory.push({
+                  ...currentEntry,
+                  status,
+                  peakPosition:
+                    currentOverallPeak <= 100 ? currentOverallPeak : null,
+                  peakStatus,
+                  weeksOnChart: i + 1,
+                  playPercentChange,
+                });
+              }
+              const detailsFallback = {
+                totalPlays: 0,
+                firstPlayDate: null,
+                lastPlayDate: null,
+                trackName: 'Unknown Track',
+                artistName: 'Unknown Artist',
+                albumMbid: null,
+                artistKey: null,
+              };
+              const details = detailsMap.get(key) || detailsFallback;
+              if (!details.trackName && key.includes(COMPOSITE_KEY_SEPARATOR))
+                details.trackName = key.split(COMPOSITE_KEY_SEPARATOR)[1];
+              if (!details.artistName)
+                details.artistName = key.includes(COMPOSITE_KEY_SEPARATOR)
+                  ? key.split(COMPOSITE_KEY_SEPARATOR)[0]
+                  : finalDataMap === processedData.artists
+                  ? key
+                  : 'Unknown Artist';
+              if (!details.albumMbid && detailsMap.get(key)?.albumMbid)
+                details.albumMbid = detailsMap.get(key).albumMbid;
+              if (!details.artistKey && detailsMap.get(key)?.artistKey)
+                details.artistKey = detailsMap.get(key).artistKey;
+              finalDataMap.set(key, { ...details, history: finalHistory });
+            });
+          }
+          calculateStatusPeakAndWeeks(
+            tempTrackHistory,
+            processedData.tracks,
+            entityDetails.tracks
+          );
+          calculateStatusPeakAndWeeks(
+            tempArtistHistory,
+            processedData.artists,
+            entityDetails.artists
+          );
+          console.log(
+            'Data processing finished including status, peak, weeks & play change calculation.'
+          );
+        }
+
+        // --- Charting & List Logic ---
+        // populateHistoryDropdown removed
+
+        function updateChartOrList() {
+          if (typeof Chart === 'undefined' || !Chart) {
+            updateStatus('Error: Charting library failed.', true);
+            return;
+          }
+          checkDateFns();
+          if (
+            !chartCanvas ||
+            !listContainer ||
+            !detailsDisplayArea ||
+            !historyViewControls ||
+            !artistCardContainer ||
+            !artistTopSongsContainer ||
+            !chartContainerDiv ||
+            !listHeaderContainer
+          ) {
+            console.error('Display containers not found.');
+            return;
+          }
+          if (!processedData.allWeeks || processedData.allWeeks.length === 0) {
+            if (chartInfo) chartInfo.textContent = 'No chart data to display.';
+            if (mainChartInstance) {
+              mainChartInstance.destroy();
+              mainChartInstance = null;
+            }
+            listContainer.innerHTML = '';
+            listHeaderContainer.style.display = 'none';
+            chartContainerDiv.style.display = 'none';
+            detailsDisplayArea.style.display = 'none';
+            historyViewControls.style.display = 'none';
+            updateWeekNavControls();
+            return;
+          }
+
+          const isHistoryView = !!selectedHistoryEntity.key;
+          const historyEntityType = selectedHistoryEntity.type; // 'track' or 'artist' or null
+          const listEntityType = entityTypeSelect.value; // 'track' or 'artist'
+
+          // Destroy existing chart if switching views or entity
+          if (mainChartInstance) {
+            mainChartInstance.destroy();
+            mainChartInstance = null;
+          }
+
+          // Show/Hide relevant sections
+          listContainer.style.display = isHistoryView ? 'none' : 'block';
+          listHeaderContainer.style.display = isHistoryView ? 'none' : 'block';
+          chartContainerDiv.style.display = isHistoryView ? 'block' : 'none';
+          historyViewControls.style.display = isHistoryView ? 'block' : 'none';
+          detailsDisplayArea.style.display = isHistoryView ? 'block' : 'none';
+          weekNavContainer.style.display = !isHistoryView ? 'flex' : 'none';
+          jumpToWeekContainer.style.display = !isHistoryView ? 'flex' : 'none';
+          exportImageBtn.style.display = !isHistoryView ? 'flex' : 'none'; // Only allow export from list view
+
+          if (isHistoryView) {
+            // --- History View ---
+            const dataMap =
+              historyEntityType === 'track'
+                ? processedData.tracks
+                : processedData.artists;
+            const entityData = dataMap.get(selectedHistoryEntity.key);
+
+            if (!entityData) {
+              console.error(
+                `Data not found for ${historyEntityType} key: ${selectedHistoryEntity.key}`
+              );
+              handleBackButtonClick(); // Go back to list if data is missing
+              return;
+            }
+
+            const displayName =
+              (historyEntityType === 'track'
+                ? entityData.trackName
+                : entityData.artistName) || selectedHistoryEntity.key;
+            chartTitle = `${
+              historyEntityType === 'track' ? 'Track' : 'Artist'
+            } History: ${displayName}`;
+            if (historyEntityType === 'track' && entityData.artistName) {
+              chartTitle += ` by ${entityData.artistName}`;
+            }
+
+            // Render Details Panel
+            renderDetailsPanel(entityData, historyEntityType);
+
+            // Render Chart (needs a slight delay for canvas to be visible)
+            setTimeout(
+              () => renderHistoryChart(displayName, entityData.history),
+              0
+            );
+          } else {
+            // --- List View ---
+            const dataMap =
+              listEntityType === 'track'
+                ? processedData.tracks
+                : processedData.artists;
+            const displayWeekIndex =
+              currentWeekIndex === -1
+                ? processedData.allWeeks.length - 1
+                : currentWeekIndex;
+            if (
+              displayWeekIndex < 0 ||
+              displayWeekIndex >= processedData.allWeeks.length
+            ) {
+              console.error('Invalid week index');
+              return;
+            }
+            const displayWeekDate = processedData.allWeeks[displayWeekIndex];
+            const displayWeekKey = formatDateKey(displayWeekDate);
+            chartTitle = `Top 100 ${listEntityType}s: Week of ${displayWeekKey}`;
+            const listData = prepareTop100ListData(
+              listEntityType,
+              dataMap,
+              displayWeekKey
+            );
+            renderTop100List(listData, listContainer); // Render the list
+            renderListHeader(); // Ensure header is shown
+            if (currentWeekDisplay) {
+              currentWeekDisplay.innerHTML = `Week: <span class="clickable-week-date" data-date="${displayWeekKey}">${displayWeekKey}</span>`;
+            }
+          }
+
+          if (chartInfo) chartInfo.textContent = chartTitle;
+          updateWeekNavControls();
+          console.log('Display updated.');
+        }
+
+        /** Renders the details panel in history view */
+        function renderDetailsPanel(entityData, entityType) {
+          let overallPeak = 101;
+          let peakWeekDate = null;
+          if (entityData.history && entityData.history.length > 0) {
+            entityData.history.forEach((entry) => {
+              if (typeof entry.rank === 'number' && !isNaN(entry.rank)) {
+                overallPeak = Math.min(overallPeak, entry.rank);
+              }
+            });
+            const firstPeakEntry = entityData.history.find(
+              (entry) => entry.rank === overallPeak
+            );
+            if (firstPeakEntry) {
+              peakWeekDate = firstPeakEntry.week;
+            }
+          }
+          const peakDisplayValue = overallPeak <= 100 ? overallPeak : '-';
+          const firstPlayHTML = entityData.firstPlayDate
+            ? `<strong class="clickable-week-date" data-date="${formatDateKey(
+                entityData.firstPlayDate
+              )}">${formatDisplayDate(entityData.firstPlayDate)}</strong>`
+            : `<strong>N/A</strong>`;
+          const lastPlayHTML = entityData.lastPlayDate
+            ? `<strong class="clickable-week-date" data-date="${formatDateKey(
+                entityData.lastPlayDate
+              )}">${formatDisplayDate(entityData.lastPlayDate)}</strong>`
+            : `<strong>N/A</strong>`;
+          const peakWeekHTML = peakWeekDate
+            ? `<strong class="clickable-week-date" data-date="${formatDateKey(
+                peakWeekDate
+              )}">${formatDisplayDate(peakWeekDate)}</strong>`
+            : `<strong>N/A</strong>`;
+          detailsInfoContainer.innerHTML = ` <span>Total Plays: <strong>${entityData.totalPlays}</strong></span> <span>First Play: ${firstPlayHTML}</span> <span>Last Play: ${lastPlayHTML}</span> <span>All-Time Peak: <strong>${peakDisplayValue}</strong></span> <span>Peak Week: ${peakWeekHTML}</span> `;
+
+          // Artist Card / Top Songs
+          artistCardContainer.style.display = 'none';
+          artistTopSongsContainer.style.display = 'none';
+          if (entityType === 'track' && entityData.artistName) {
+            // Use the stored artistKey (MBID or name) for linking
+            const artistKey = entityData.artistKey || entityData.artistName;
+            const artistData = processedData.artists.get(artistKey);
+            if (artistData) {
+              const artistFirstPlayHTML = artistData.firstPlayDate
+                ? `<strong class="clickable-week-date" data-date="${formatDateKey(
+                    artistData.firstPlayDate
+                  )}">${formatDisplayDate(artistData.firstPlayDate)}</strong>`
+                : `<strong>N/A</strong>`;
+              const artistLastPlayHTML = artistData.lastPlayDate
+                ? `<strong class="clickable-week-date" data-date="${formatDateKey(
+                    artistData.lastPlayDate
+                  )}">${formatDisplayDate(artistData.lastPlayDate)}</strong>`
+                : `<strong>N/A</strong>`;
+              artistCardContainer.innerHTML = ` Artist: <strong>${entityData.artistName}</strong> <span>First Play: ${artistFirstPlayHTML}</span> <span>Last Play: ${artistLastPlayHTML}</span> <span class="text-xs text-blue-600 hover:underline">(View Artist History)</span> `;
+              artistCardContainer.dataset.artistKey = artistKey; // Store the key (MBID or name)
+              artistCardContainer.style.display = 'block';
+            }
+          } else if (entityType === 'artist') {
+            displayArtistTopSongs(selectedHistoryEntity.key); // Use the key directly
+          }
+        }
+
+        /** Renders the history chart */
+        function renderHistoryChart(displayName, history) {
+          if (!chartCanvas) return;
+          if (mainChartInstance) mainChartInstance.destroy(); // Destroy previous chart
+          if (typeof Chart === 'undefined') {
+            updateStatus('Error: Charting library failed.', true);
+            return;
+          }
+
+          const { labels, datasets } = prepareHistoryChartData(
+            displayName,
+            history
+          );
+          const config = {
+            type: 'line',
+            data: { labels, datasets },
+            options: getLineChartOptions('Rank', 'Week Starting', true),
+          };
+          try {
+            mainChartInstance = new Chart(chartCanvas, config);
+          } catch (e) {
+            console.error('Error creating history chart:', e);
+            updateStatus('Error creating chart.', true);
+          }
+        }
+
+        // --- Other functions ---
+        function prepareHistoryChartData(entityName, historyArray) {
+          const labels = processedData.allWeeks.map(formatDateKey);
+          const historyPoints = new Map(
+            historyArray.map((h) => [formatDateKey(h.week), h.rank])
+          );
+          const chartDataPoints = labels.map((label) =>
+            label ? historyPoints.get(label) ?? null : null
+          );
+          const datasets = [
+            {
+              label: `${entityName} Rank`,
+              data: chartDataPoints,
+              borderColor: '#4f46e5',
+              backgroundColor: '#c7d2fe',
+              tension: 0.1,
+              fill: false,
+              spanGaps: false,
+              pointRadius: 3,
+              pointHoverRadius: 5,
+            },
+          ];
+          return { labels, datasets };
+        }
+        function prepareTop100ListData(entityType, dataMap, weekKey) {
+          const listData = [];
+          const weekDate = dateFns.parseISO(weekKey);
+          dataMap.forEach((data, key) => {
+            const rankEntry = data.history.find(
+              (h) => formatDateKey(h.week) === weekKey
+            );
+            if (rankEntry) {
+              const weeksOnChart =
+                rankEntry.weeksOnChart ||
+                data.history.filter(
+                  (h) => dateFns.compareAsc(h.week, weekDate) <= 0
+                ).length;
+              listData.push({
+                key: key,
+                name:
+                  (entityType === 'track' ? data.trackName : data.artistName) ||
+                  key,
+                artistName: entityType === 'track' ? data.artistName : null,
+                albumMbid: entityType === 'track' ? data.albumMbid : null,
+                rank: rankEntry.rank,
+                plays: rankEntry.playsInWindow,
+                status: rankEntry.status,
+                peak: rankEntry.peakPosition,
+                peakStatus: rankEntry.peakStatus,
+                weeksOnChart: weeksOnChart,
+                playPercentChange: rankEntry.playPercentChange,
+              });
+            }
+          });
+          listData.sort((a, b) => a.rank - b.rank);
+          while (listData.length < 100 && listData.length > 0) {
+            listData.push({
+              key: '-',
+              name: '-',
+              rank: listData.length + 1,
+              plays: '-',
+              status: null,
+              peak: '-',
+              peakStatus: null,
+              weeksOnChart: 0,
+              artistName: null,
+              playPercentChange: null,
+              albumMbid: null,
+            });
+          }
+          return listData;
+        }
+        function renderListHeader() {
+          if (!listHeaderContainer) return;
+          listHeaderContainer.innerHTML = ` <div class="list-header"> <div>Rank</div> <div></div> <div>Title</div> <div>Peak</div> <div>Change</div> <div>Weeks</div> </div> `;
+        }
+        function renderTop100List(listData, container) {
+          container.innerHTML = '';
+          if (listData.length === 0) {
+            container.textContent = 'No ranking data available for this week.';
+            return;
+          }
+          listData.forEach((item) => {
+            const li = document.createElement('div');
+            li.className = 'chart-row';
+            if (item.key !== '-') {
+              li.dataset.key = item.key;
+            } else {
+              li.style.cursor = 'default';
+            }
+            let statusIndicator = '';
+            let statusClass = '';
+            if (item.status === 'NEW') {
+              statusIndicator = '★';
+              statusClass = 'list-change-new';
+            } else if (item.status === 'RE-ENTRY') {
+              statusIndicator = '★';
+              statusClass = 'list-change-re';
+            } else if (typeof item.status === 'number') {
+              if (item.status > 0) {
+                statusIndicator = `<span>▲</span> ${item.status}`;
+                statusClass = 'list-change-up';
+              } else if (item.status < 0) {
+                statusIndicator = `<span>▼</span> ${Math.abs(item.status)}`;
+                statusClass = 'list-change-down';
+              } else {
+                statusIndicator = '=';
+                statusClass = 'list-change-same';
+              }
+            } else {
+              statusIndicator = '-';
+              statusClass = 'list-change-same';
+            }
+            const peakIndicatorHTML =
+              item.peakStatus === 'PEAK'
+                ? `<span class="peak-indicator">▲ Peak</span>`
+                : item.peakStatus === 'RE-PEAK'
+                ? `<span class="peak-indicator">▲ Re-Peak</span>`
+                : '';
+            const peakDisplay =
+              typeof item.peak === 'number' && item.peak <= 100
+                ? item.peak
+                : '-';
+            let imageHTML = '';
+            let initials = '?';
+            if (item.name !== '-') {
+              initials = item.name.charAt(0).toUpperCase();
+              if (item.artistName && entityTypeSelect.value === 'track') {
+                initials += item.artistName.charAt(0).toUpperCase();
+              } else if (
+                entityTypeSelect.value === 'artist' &&
+                item.name.length > 1
+              ) {
+                initials = item.name.substring(0, 2).toUpperCase();
+              }
+            }
+            const safeInitials = initials.replace(/['"\\]/g, '\\$&');
+            const onErrorLogic =
+              `this.onerror=null; const parentContainer = this.parentNode; if(parentContainer && parentContainer.classList.contains('list-image-container')){ const ph = document.createElement('div'); ph.className='list-image-placeholder'; ph.textContent='${safeInitials}'; parentContainer.innerHTML=''; parentContainer.appendChild(ph); } else { console.error('Could not find image container for fallback.'); this.remove(); }`.replace(
+                /\n\s*/g,
+                ' '
+              );
+            if (item.albumMbid && entityTypeSelect.value === 'track') {
+              imageHTML = ` <div class="list-image-container"> <img src="https://coverartarchive.org/release/${item.albumMbid}/front-250" alt="Cover Art" loading="lazy" onerror="${onErrorLogic}"> </div>`;
+            } else {
+              imageHTML = `<div class="list-image-container"><div class="list-image-placeholder">${initials}</div></div>`;
+            }
+            const weeksDisplay = item.weeksOnChart || '-';
+            li.innerHTML = ` <div class="list-rank">${
+              item.rank
+            }</div> ${imageHTML} <div class="list-details"> <span class="list-name">${
+              item.name
+            }</span> ${
+              item.artistName
+                ? `<span class="list-artist">${item.artistName}</span>`
+                : ''
+            } <span class="list-plays">Plays: ${
+              item.plays
+            } ${peakIndicatorHTML}</span> </div> <div class="list-peak-info"> ${peakDisplay} <span>Peak</span> </div> <div class="list-change ${statusClass}"> ${statusIndicator} </div> <div class="list-weeks">${weeksDisplay}</div> `;
+            container.appendChild(li);
+          });
+        }
+        function getLineChartOptions(yLabel, xLabel, enableClicks = false) {
+          const options = {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              y: {
+                reverse: true,
+                title: { display: true, text: yLabel },
+                ticks: {
+                  precision: 0,
+                  max: 100,
+                  min: 1,
+                  suggestedMin: 1,
+                  suggestedMax: 100,
+                },
+                beginAtZero: false,
+              },
+              x: {
+                title: { display: true, text: xLabel },
+                ticks: {
+                  autoSkip: true,
+                  maxTicksLimit: 15,
+                  maxRotation: 70,
+                  minRotation: 0,
+                },
+              },
+            },
+            plugins: {
+              legend: { display: true },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) =>
+                    ctx.parsed.y !== null
+                      ? `Rank: ${ctx.parsed.y}`
+                      : 'Not Ranked',
+                },
+              },
+            },
+            interaction: { mode: 'index', intersect: false },
+          };
+          if (enableClicks) {
+            options.onClick = (event, elements) => {
+              if (elements.length > 0) {
+                const clickedIndex = elements[0].index;
+                if (
+                  clickedIndex >= 0 &&
+                  clickedIndex < processedData.allWeeks.length
+                ) {
+                  const clickedWeekDate = processedData.allWeeks[clickedIndex];
+                  console.log(
+                    'Chart week clicked:',
+                    formatDateKey(clickedWeekDate)
+                  );
+                  currentWeekIndex = clickedIndex;
+                  selectedHistoryEntity = { key: null, type: null };
+                  searchInput.value = '';
+                  updateChartOrList();
+                }
+              }
+            };
+          }
+          return options;
+        }
+        function updateWeekNavControls() {
+          if (!prevWeekBtn || !nextWeekBtn) return;
+          const maxIndex = processedData.allWeeks.length - 1;
+          const displayWeekIndex =
+            currentWeekIndex === -1 ? maxIndex : currentWeekIndex;
+          prevWeekBtn.disabled = displayWeekIndex <= 0;
+          nextWeekBtn.disabled = displayWeekIndex >= maxIndex;
+        }
+        function setDateInputRange() {
+          if (
+            !weekJumpInput ||
+            !processedData.allWeeks ||
+            processedData.allWeeks.length === 0
+          )
+            return;
+          try {
+            checkDateFns();
+            weekJumpInput.min = formatDateKey(processedData.allWeeks[0]);
+            weekJumpInput.max = formatDateKey(
+              processedData.allWeeks[processedData.allWeeks.length - 1]
+            );
+          } catch (e) {
+            console.error('Error setting date input range:', e);
+          }
+        }
+
+        /** Displays top 10 songs for an artist, using artistKey for matching */
+        function displayArtistTopSongs(viewedArtistKey) {
+          if (!artistTopSongsContainer) return;
+          artistTopSongsContainer.innerHTML = '';
+          artistTopSongsContainer.style.display = 'none';
+
+          const viewedArtistData = processedData.artists.get(viewedArtistKey);
+          const displayArtistName =
+            viewedArtistData?.artistName || viewedArtistKey; // Use name for display
+
+          const artistTracks = [];
+          processedData.tracks.forEach((trackData, trackKey) => {
+            // Match using the stored artistKey on the track data
+            if (trackData.artistKey === viewedArtistKey) {
+              let trackPeak = 101;
+              let trackPeakWeek = null;
+              if (trackData.history && trackData.history.length > 0) {
+                trackData.history.forEach((h) => {
+                  if (typeof h.rank === 'number' && !isNaN(h.rank)) {
+                    trackPeak = Math.min(trackPeak, h.rank);
+                  }
+                });
+                const firstPeakEntry = trackData.history.find(
+                  (h) => h.rank === trackPeak
+                );
+                if (firstPeakEntry) {
+                  trackPeakWeek = firstPeakEntry.week;
+                }
+              }
+              artistTracks.push({
+                key: trackKey, // Track's unique key
+                name: trackData.trackName,
+                totalPlays: trackData.totalPlays,
+                peak: trackPeak <= 100 ? trackPeak : null,
+                peakWeek: trackPeakWeek,
+              });
+            }
+          });
+
+          if (artistTracks.length === 0) return;
+
+          artistTracks.sort((a, b) => {
+            const peakA = a.peak === null ? 101 : a.peak;
+            const peakB = b.peak === null ? 101 : b.peak;
+            if (peakA !== peakB) {
+              return peakA - peakB;
+            }
+            return b.totalPlays - a.totalPlays;
+          });
+
+          const top10Tracks = artistTracks.slice(0, 10);
+          let listHTML = `<h4>Top ${top10Tracks.length} Tracks for ${displayArtistName} (Sorted by Peak, then Plays):</h4>`;
+          top10Tracks.forEach((track, index) => {
+            const peakDisplay = track.peak !== null ? track.peak : '-';
+            const peakWeekDateKey = formatDateKey(track.peakWeek);
+            const peakWeekDisplayHTML = peakWeekDateKey
+              ? `<span class="clickable-week-date" data-date="${peakWeekDateKey}">${formatDisplayDate(
+                  track.peakWeek
+                )}</span>`
+              : formatDisplayDate(track.peakWeek);
+            listHTML += `
+                        <div class="artist-song-item">
+                            <div class="artist-song-rank">${index + 1}.</div>
+                            <div>
+                                <span class="artist-song-name" data-track-key="${
+                                  track.key
+                                }">${track.name}</span>
+                                <div class="artist-song-plays">(${
+                                  track.totalPlays
+                                } Plays)</div>
+                            </div>
+                            <div class="artist-song-peak-info">Peak: ${peakDisplay} (${peakWeekDisplayHTML})</div>
+                        </div>
+                    `;
+          });
+          artistTopSongsContainer.innerHTML = listHTML;
+          artistTopSongsContainer.style.display = 'block';
+        }
+
+        // --- Export Image Functionality ---
+        function renderExportListHTML(listData, title, imageResults) {
+          let html = `<h3>${title}</h3>`;
+          html += ` <div class="export-grid-header"> <div>Rank</div> <div>Art</div> <div>+/-</div> <div style="text-align: left;">Song</div> <div>Points</div> <div>%</div> <div>Peak</div> <div>WoC</div> </div> `;
+          if (listData.length === 0) {
+            html +=
+              '<div style="text-align: center; padding: 10px; background-color: white; border-radius: 0 0 8px 8px;">No ranking data available for this week.</div>';
+          } else {
+            const baseColor = '#FFFFFF';
+            const positiveTargetColor = '#6EE7B7';
+            const negativeTargetColor = '#FCA5A5';
+            const newColor = '#FEF9C3';
+            listData.forEach((item, index) => {
+              let rowBgColor = baseColor;
+              const change = item.playPercentChange;
+              if (item.status === 'NEW') {
+                rowBgColor = newColor;
+              } else if (
+                typeof change === 'number' &&
+                change !== Infinity &&
+                change !== 0
+              ) {
+                const absChange = Math.abs(change);
+                const factor = Math.min(absChange / 100, 1);
+                if (change > 0) {
+                  rowBgColor = interpolateColor(
+                    baseColor,
+                    positiveTargetColor,
+                    factor
+                  );
+                } else if (change < 0) {
+                  rowBgColor = interpolateColor(
+                    baseColor,
+                    negativeTargetColor,
+                    factor
+                  );
+                }
+              }
+              let rankChangeText = '';
+              let rankChangeStyle = 'color: #6b7280;';
+              if (item.status === 'NEW') {
+                rankChangeText = 'NEW';
+                rankChangeStyle = 'color: #a855f7; font-weight: bold;';
+              } else if (item.status === 'RE-ENTRY') {
+                rankChangeText = 'RE';
+                rankChangeStyle = 'color: #a855f7; font-weight: bold;';
+              } else if (typeof item.status === 'number') {
+                if (item.status > 0) {
+                  rankChangeText = `+${item.status}`;
+                  rankChangeStyle = 'color: #10b981;';
+                } else if (item.status < 0) {
+                  rankChangeText = `${item.status}`;
+                  rankChangeStyle = 'color: #ef4444;';
+                } else {
+                  rankChangeText = '=';
+                }
+              } else {
+                rankChangeText = '-';
+              }
+              let playChangeText = '-';
+              if (item.status === 'NEW') {
+                playChangeText = 'NEW';
+              } else if (typeof item.playPercentChange === 'number') {
+                const pc = item.playPercentChange;
+                if (pc === Infinity) {
+                  playChangeText = '++%';
+                } else if (pc > 0) {
+                  playChangeText = `+${pc.toFixed(0)}%`;
+                } else if (pc < 0) {
+                  playChangeText = `${pc.toFixed(0)}%`;
+                } else {
+                  playChangeText = '=';
+                }
+              }
+              const peakDisplay =
+                typeof item.peak === 'number' && item.peak <= 100
+                  ? item.peak
+                  : '-';
+              const weeksDisplay = item.weeksOnChart || '-';
+              const pointsDisplay = item.plays || '-';
+              let imageCellHTML = '';
+              const imgResult = imageResults.get(item.key);
+              if (imgResult && imgResult.success) {
+                imageCellHTML = `<div class="list-image-container"><img src="${imgResult.element.src}" alt="Cover Art"></div>`;
+              } else {
+                let initials = '?';
+                if (item.name !== '-') {
+                  initials = item.name.charAt(0).toUpperCase();
+                  if (item.artistName && entityTypeSelect.value === 'track') {
+                    initials += item.artistName.charAt(0).toUpperCase();
+                  } else if (
+                    entityTypeSelect.value === 'artist' &&
+                    item.name.length > 1
+                  ) {
+                    initials = item.name.substring(0, 2).toUpperCase();
+                  }
+                }
+                imageCellHTML = `<div class="list-image-container"><div class="list-image-placeholder">${initials}</div></div>`;
+              }
+              const isLastRow = index === listData.length - 1;
+              const rowStyle = `background-color: ${rowBgColor}; ${
+                isLastRow ? 'border-radius: 0 0 8px 8px;' : ''
+              }`;
+              html += ` <div class="export-grid-row" style="${rowStyle}"> <div class="list-rank">${
+                item.rank
+              }</div> <div>${imageCellHTML}</div> <div class="list-change" style="${rankChangeStyle}">${rankChangeText}</div> <div> <span class="list-name">${
+                item.name
+              }</span> ${
+                item.artistName
+                  ? `<span class="list-artist">${item.artistName}</span>`
+                  : ''
+              } </div> <div>${pointsDisplay}</div> <div>${playChangeText}</div> <div>${peakDisplay}</div> <div>${weeksDisplay}</div> </div> `;
+            });
+          }
+          return html;
+        }
+        async function preloadImages(listData) {
+          const promises = [];
+          const imageMap = new Map();
+          listData.forEach((item) => {
+            if (item.albumMbid && entityTypeSelect.value === 'track') {
+              const promise = new Promise((resolve) => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () =>
+                  resolve({ key: item.key, success: true, element: img });
+                img.onerror = () => resolve({ key: item.key, success: false });
+                img.src = `https://coverartarchive.org/release/${item.albumMbid}/front-250`;
+              });
+              promises.push(promise);
+            } else {
+              imageMap.set(item.key, { success: false });
+            }
+          });
+          const results = await Promise.allSettled(promises);
+          results.forEach((result) => {
+            if (result.status === 'fulfilled' && result.value) {
+              imageMap.set(result.value.key, {
+                success: result.value.success,
+                element: result.value.element,
+              });
+            }
+            if (result.status === 'rejected') {
+              console.error('Image preload promise rejected:', result.reason);
+            }
+          });
+          return imageMap;
+        }
+        async function handleExportImageClick() {
+          if (typeof html2canvas === 'undefined') {
+            updateStatus('Error: Image export library not loaded.', true);
+            console.error('html2canvas is not defined.');
+            return;
+          }
+          if (selectedHistoryEntity.key) {
+            updateStatus(
+              'Export is only available for the Top 100 list view.',
+              true
+            );
+            return;
+          }
+          const originalButtonText = exportImageBtn.textContent;
+          exportImageBtn.disabled = true;
+          exportImageBtn.textContent = 'Generating...';
+          updateStatus('Preparing export data (this may take a moment)...');
+          try {
+            const currentEntityType = entityTypeSelect.value;
+            const dataMap =
+              currentEntityType === 'track'
+                ? processedData.tracks
+                : processedData.artists;
+            const displayWeekIndex =
+              currentWeekIndex === -1
+                ? processedData.allWeeks.length - 1
+                : currentWeekIndex;
+            const displayWeekDate = processedData.allWeeks[displayWeekIndex];
+            const displayWeekKey = formatDateKey(displayWeekDate);
+            if (!displayWeekKey) {
+              updateStatus('Cannot determine current week.', true);
+              throw new Error('Cannot determine current week.');
+            }
+            const listData = prepareTop100ListData(
+              currentEntityType,
+              dataMap,
+              displayWeekKey
+            );
+            const topNData = listData.slice(0, exportCountN);
+            let imageResults = await preloadImages(topNData);
+            console.log('Image preload results:', imageResults);
+            updateStatus('Generating HTML preview...');
+            const exportTitle = `Top ${exportCountN} ${currentEntityType}s - Week of ${displayWeekKey}`;
+            const exportContentHTML = renderExportListHTML(
+              topNData,
+              exportTitle,
+              imageResults
+            );
+            tempExportFilename = `top${exportCountN}-${currentEntityType}-chart-${displayWeekKey}.png`;
+            if (previewHtmlContainer && exportPreviewModal) {
+              previewHtmlContainer.innerHTML = exportContentHTML;
+              exportPreviewModal.style.display = 'flex';
+              updateStatus(
+                'Preview ready. Confirm to generate image and download.'
+              );
+            } else {
+              console.error('Preview modal elements not found!');
+              updateStatus(
+                'Error showing preview. Attempting direct download.',
+                true
+              );
+              await confirmAndDownloadExport();
+            }
+          } catch (err) {
+            console.error('Error during export preparation:', err);
+            updateStatus(
+              'Error preparing export. See console for details.',
+              true
+            );
+          } finally {
+            exportImageBtn.disabled = false;
+            exportImageBtn.textContent = originalButtonText;
+          }
+        }
+        function closeExportModal() {
+          if (exportPreviewModal) {
+            exportPreviewModal.style.display = 'none';
+            if (previewHtmlContainer) previewHtmlContainer.innerHTML = '';
+            tempExportFilename = '';
+          }
+        }
+        async function confirmAndDownloadExport() {
+          const htmlToExport = previewHtmlContainer?.innerHTML;
+          if (!htmlToExport || !tempExportFilename) {
+            updateStatus('Error: Export data not found in preview.', true);
+            closeExportModal();
+            return;
+          }
+          confirmExportBtn.disabled = true;
+          confirmExportBtn.textContent = 'Generating...';
+          updateStatus('Generating image from preview...');
+          const exportContainerId = 'exportContainer';
+          let exportContainer = document.getElementById(exportContainerId);
+          if (exportContainer) exportContainer.remove();
+          exportContainer = document.createElement('div');
+          exportContainer.id = exportContainerId;
+          exportContainer.style.position = 'absolute';
+          exportContainer.style.left = '-9999px';
+          exportContainer.style.top = 'auto';
+          exportContainer.style.width = '800px';
+          exportContainer.style.background =
+            'linear-gradient(to bottom, #e0f2fe, #bfdbfe)';
+          exportContainer.style.padding = '40px';
+          exportContainer.style.display = 'flex';
+          exportContainer.style.flexDirection = 'column';
+          exportContainer.style.alignItems = 'center';
+          exportContainer.style.justifyContent = 'flex-start';
+          exportContainer.style.minHeight = '600px';
+          exportContainer.style.fontFamily = "'Inter', sans-serif";
+          exportContainer.style.fontSize = '14px';
+          exportContainer.innerHTML = htmlToExport;
+          document.body.appendChild(exportContainer);
+          try {
+            await new Promise((resolve) => setTimeout(resolve, 150));
+            const canvas = await html2canvas(exportContainer, {
+              backgroundColor: '#d0e8ff',
+              useCORS: true,
+              logging: false,
+            });
+            const imageURL = canvas.toDataURL('image/png');
+            const downloadLink = document.createElement('a');
+            downloadLink.download = tempExportFilename;
+            downloadLink.href = imageURL;
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+            updateStatus('Image exported successfully.');
+          } catch (err) {
+            console.error('Error exporting image:', err);
+            updateStatus(
+              'Error generating image. See console for details.',
+              true
+            );
+          } finally {
+            if (exportContainer) exportContainer.remove();
+            confirmExportBtn.disabled = false;
+            confirmExportBtn.textContent = 'Generate Image & Download';
+            closeExportModal();
+          }
+        }
+      }); // End of DOMContentLoaded listener
+    </script>
+  </body>
+</html>
