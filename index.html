@@ -1126,26 +1126,74 @@
 
     <script>
       document.addEventListener('DOMContentLoaded', () => {
+        // --- CONSTANTS ---
+        const CONSTANTS = {
+          COMPOSITE_KEY_SEPARATOR: ' --- ',
+          MAX_LIST_ITEMS: 100,
+          DEFAULT_PEAK_VALUE: 101, // Value indicating 'not ranked' or worse than max
+          DEFAULT_EXPORT_COUNT: 15,
+          MIN_EXPORT_COUNT: 1,
+          MAX_EXPORT_COUNT: 100,
+          DEFAULT_WINDOW_WEEKS: 4,
+          MIN_WINDOW_DURATION: 1,
+          SEARCH_DEBOUNCE_MS: 150, // Delay for hiding suggestions on blur
+          EXPORT_CONTAINER_ID: 'exportContainer',
+          EXPORT_IMAGE_WIDTH: 800, // Width of the off-screen container for export
+          EXPORT_PRELOAD_TIMEOUT: 150, // Short delay before generating canvas
+          CHART_POINT_RADIUS: 3,
+          CHART_POINT_HOVER_RADIUS: 5,
+          CHART_TENSION: 0.1,
+          CHART_BORDER_COLOR: '#4f46e5',
+          CHART_BACKGROUND_COLOR: '#c7d2fe',
+          EXPORT_BG_GRADIENT: 'linear-gradient(to bottom, #e0f2fe, #bfdbfe)',
+          EXPORT_ROW_BG_BASE: '#FFFFFF',
+          EXPORT_ROW_BG_POSITIVE: '#6EE7B7', // Light green
+          EXPORT_ROW_BG_NEGATIVE: '#FCA5A5', // Light red
+          EXPORT_ROW_BG_NEW: '#FEF9C3', // Light yellow
+          EXPORT_MAX_PLAY_CHANGE_FACTOR: 1.0, // Max intensity for play change color (100% change)
+        };
+
         // --- DOM Elements ---
+        // Grouped by functionality for clarity
+        // Upload Section
         const csvFileInput = document.getElementById('csvFileInput');
         const uploadButton = document.getElementById('uploadButton');
         const dropZone = document.getElementById('dropZone');
         const statusDiv = document.getElementById('status');
         const uploadSection = document.getElementById('uploadSection');
+
+        // Chart/List Section
         const chartSection = document.getElementById('chartSection');
         const chartCanvas = document.getElementById('billboardChart');
+        const chartContainerDiv = chartCanvas.parentElement; // Assumes canvas is direct child
         const listContainer = document.getElementById('top100ListContainer');
-        const chartContainerDiv = chartCanvas.parentElement;
+        const listHeaderContainer = document.getElementById(
+          'listHeaderContainer'
+        );
         const chartInfo = document.getElementById('chartInfo');
+
+        // Controls
         const entityTypeSelect = document.getElementById('entityType');
-        /* History select removed */ const searchInput =
-          document.getElementById('searchInput');
+        const searchInput = document.getElementById('searchInput');
         const suggestionsDiv = document.getElementById('suggestions');
         const prevWeekBtn = document.getElementById('prevWeekBtn');
         const nextWeekBtn = document.getElementById('nextWeekBtn');
         const currentWeekDisplay =
           document.getElementById('currentWeekDisplay');
         const weekNavContainer = document.getElementById('weekNavContainer');
+        const weekJumpInput = document.getElementById('weekJumpInput');
+        const jumpToWeekBtn = document.getElementById('jumpToWeekBtn');
+        const jumpToWeekContainer = document.getElementById(
+          'jumpToWeekContainer'
+        );
+        const exportImageBtn = document.getElementById('exportImageBtn');
+        const settingsBtn = document.getElementById('settingsBtn');
+
+        // History/Details View
+        const historyViewControls = document.getElementById(
+          'historyViewControls'
+        );
+        const backToListBtn = document.getElementById('backToListBtn');
         const detailsDisplayArea =
           document.getElementById('detailsDisplayArea');
         const detailsInfoContainer = document.getElementById(
@@ -1154,25 +1202,12 @@
         const artistCardContainer = document.getElementById(
           'artistCardContainer'
         );
-        const historyViewControls = document.getElementById(
-          'historyViewControls'
-        );
-        const backToListBtn = document.getElementById('backToListBtn');
-        const weekJumpInput = document.getElementById('weekJumpInput');
-        const jumpToWeekBtn = document.getElementById('jumpToWeekBtn');
-        const jumpToWeekContainer = document.getElementById(
-          'jumpToWeekContainer'
-        );
         const artistTopSongsContainer = document.getElementById(
           'artistTopSongsContainer'
         );
-        const exportImageBtn = document.getElementById('exportImageBtn');
-        /* exportContainerBtn removed */
-        const listHeaderContainer = document.getElementById(
-          'listHeaderContainer'
-        );
+
+        // Settings Section
         const settingsSection = document.getElementById('settingsSection');
-        const settingsBtn = document.getElementById('settingsBtn');
         const closeSettingsBtn = document.getElementById('closeSettingsBtn');
         const applySettingsBtn = document.getElementById('applySettingsBtn');
         const windowDurationInput = document.getElementById(
@@ -1180,7 +1215,8 @@
         );
         const windowUnitSelect = document.getElementById('windowUnitSelect');
         const exportCountInput = document.getElementById('exportCountInput');
-        // Modal Elements
+
+        // Export Modal
         const exportPreviewModal =
           document.getElementById('exportPreviewModal');
         const previewHtmlContainer = document.getElementById(
@@ -1188,53 +1224,82 @@
         );
         const previewContentWrapper = document.getElementById(
           'previewContentWrapper'
-        ); // Get the new wrapper
+        );
         const confirmExportBtn = document.getElementById('confirmExportBtn');
         const cancelExportBtn = document.getElementById('cancelExportBtn');
 
-        // --- Global Variables ---
+        // --- Global State ---
         let mainChartInstance = null;
-        let processedData = {
-          tracks: new Map(),
-          artists: new Map(),
-          allWeeks: [],
-          rawData: [],
-        };
-        let selectedHistoryEntity = { key: null, type: null }; // Store key and type ('track' or 'artist')
-        let currentWeekIndex = -1;
-        let slidingWindowWeeks = 4;
-        let exportCountN = 15;
-        let tempExportFilename = ''; // Store filename for confirmation
+        let processedData = createEmptyProcessedData();
+        let selectedHistoryEntity = { key: null, type: null };
+        let currentWeekIndex = -1; // -1 signifies the latest week
+        let slidingWindowWeeks = CONSTANTS.DEFAULT_WINDOW_WEEKS;
+        let exportCountN = CONSTANTS.DEFAULT_EXPORT_COUNT;
+        let tempExportFilename = ''; // Stores filename between preview and download
 
-        // --- Constants ---
-        const COMPOSITE_KEY_SEPARATOR = ' --- ';
-
-        // --- Date Helpers ---
-        function checkDateFns() {
-          if (
-            typeof dateFns === 'undefined' ||
-            !dateFns ||
-            typeof dateFns.format !== 'function'
-          ) {
-            console.error('date-fns v4 failed.');
-            throw new Error('Date library failed.');
-          }
-          return true;
-        }
-        function getWeekStartDate(date) {
-          checkDateFns();
-          return dateFns.startOfWeek(date, { weekStartsOn: 0 });
-        }
-        function formatDateKey(date) {
-          checkDateFns();
-          return date ? dateFns.format(date, 'yyyy-MM-dd') : null;
-        }
-        function formatDisplayDate(date) {
-          checkDateFns();
-          return date ? dateFns.format(date, 'yyyy-MM-dd') : 'N/A';
-        }
+        // --- Initialization ---
+        checkDependencies();
+        setupEventListeners();
+        updateSettingsUI(); // Set initial values based on defaults
 
         // --- Utility Functions ---
+
+        /** Creates an empty structure for processed data */
+        function createEmptyProcessedData() {
+          return {
+            tracks: new Map(),
+            artists: new Map(),
+            allWeeks: [], // Sorted array of week start Date objects
+            rawData: [], // Store original parsed data for reprocessing
+          };
+        }
+
+        /** Checks if required external libraries are loaded */
+        function checkDependencies() {
+          const libraries = { Papa, Chart, dateFns, html2canvas };
+          for (const libName in libraries) {
+            if (
+              typeof libraries[libName] === 'undefined' ||
+              !libraries[libName]
+            ) {
+              const errorMsg = `Error: Required library '${libName}' failed to load.`;
+              console.error(errorMsg);
+              updateStatus(errorMsg, true);
+              // Optionally, disable UI elements that depend on the library
+              throw new Error(errorMsg); // Stop execution if critical libs are missing
+            }
+          }
+          // Specifically check date-fns functions needed
+          if (
+            typeof dateFns?.format !== 'function' ||
+            typeof dateFns?.startOfWeek !== 'function'
+          ) {
+            const errorMsg = 'Error: Required date-fns functions not found.';
+            console.error(errorMsg);
+            updateStatus(errorMsg, true);
+            throw new Error(errorMsg);
+          }
+        }
+
+        // --- Date Helpers ---
+        // (Using optional chaining ?. just in case dateFns fails loading gracefully)
+
+        /** Gets the start of the week (Sunday) for a given Date object */
+        function getWeekStartDate(date) {
+          return dateFns?.startOfWeek(date, { weekStartsOn: 0 });
+        }
+
+        /** Formats a Date object into 'yyyy-MM-dd' string */
+        function formatDateKey(date) {
+          return date ? dateFns?.format(date, 'yyyy-MM-dd') : null;
+        }
+
+        /** Formats a Date object for display, handling nulls */
+        function formatDisplayDate(date) {
+          return date ? dateFns?.format(date, 'yyyy-MM-dd') : 'N/A';
+        }
+
+        // --- Color Helpers ---
         function hexToRgb(hex) {
           const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
           return result
@@ -1245,6 +1310,7 @@
               }
             : null;
         }
+
         function rgbToHex(r, g, b) {
           return (
             '#' +
@@ -1254,214 +1320,110 @@
               .toUpperCase()
           );
         }
+
+        /** Interpolates between two hex colors based on a factor (0-1) */
         function interpolateColor(color1, color2, factor) {
           factor = Math.max(0, Math.min(1, factor));
           const rgb1 = hexToRgb(color1);
           const rgb2 = hexToRgb(color2);
-          if (!rgb1 || !rgb2) return color1;
+          if (!rgb1 || !rgb2) return color1; // Fallback to color1 if parsing fails
           const r = Math.round(rgb1.r + factor * (rgb2.r - rgb1.r));
           const g = Math.round(rgb1.g + factor * (rgb2.g - rgb1.g));
           const b = Math.round(rgb1.b + factor * (rgb2.b - rgb1.b));
           return rgbToHex(r, g, b);
         }
 
-        // --- Event Listeners ---
-        setupEventListeners();
-
-        // --- Functions ---
+        // --- Event Listener Setup ---
         function setupEventListeners() {
-          if (uploadButton)
-            uploadButton.addEventListener('click', () => csvFileInput.click());
-          if (dropZone) {
-            dropZone.addEventListener('click', () => csvFileInput.click());
-            dropZone.addEventListener('dragover', handleDragOver);
-            dropZone.addEventListener('dragleave', handleDragLeave);
-            dropZone.addEventListener('drop', handleDrop);
-          }
-          if (csvFileInput)
-            csvFileInput.addEventListener('change', handleFileSelect);
-          if (entityTypeSelect)
-            entityTypeSelect.addEventListener('change', handleEntityTypeChange); // Keep this to control default list view
-          if (searchInput) {
-            searchInput.addEventListener('input', handleSearchInput);
-            searchInput.addEventListener('blur', () =>
-              setTimeout(() => suggestionsDiv.classList.add('hidden'), 150)
-            );
-          }
-          if (suggestionsDiv)
-            suggestionsDiv.addEventListener('mousedown', handleSuggestionClick); // Use mousedown to fire before blur
-          if (prevWeekBtn)
-            prevWeekBtn.addEventListener('click', () => navigateWeek(-1));
-          if (nextWeekBtn)
-            nextWeekBtn.addEventListener('click', () => navigateWeek(1));
-          if (listContainer)
-            listContainer.addEventListener('click', handleListItemClick);
-          if (backToListBtn)
-            backToListBtn.addEventListener('click', handleBackButtonClick);
-          if (artistCardContainer)
-            artistCardContainer.addEventListener(
-              'click',
-              handleArtistCardClick
-            );
-          if (jumpToWeekBtn)
-            jumpToWeekBtn.addEventListener('click', handleJumpToWeek);
-          if (detailsInfoContainer)
-            detailsInfoContainer.addEventListener('click', handleWeekDateClick);
-          if (artistTopSongsContainer) {
-            artistTopSongsContainer.addEventListener(
-              'click',
-              handleWeekDateClick
-            );
-            artistTopSongsContainer.addEventListener(
-              'click',
-              handleArtistTopSongClick
-            );
-          }
-          if (weekNavContainer)
-            weekNavContainer.addEventListener('click', handleWeekDateClick);
-          if (exportImageBtn)
-            exportImageBtn.addEventListener('click', handleExportImageClick);
-          if (settingsBtn)
-            settingsBtn.addEventListener('click', () => {
-              settingsSection.style.display = 'block';
-              updateSettingsUI();
-            });
-          if (closeSettingsBtn)
-            closeSettingsBtn.addEventListener(
-              'click',
-              () => (settingsSection.style.display = 'none')
-            );
-          if (applySettingsBtn)
-            applySettingsBtn.addEventListener('click', handleApplySettings);
-          // Modal Listeners
-          if (cancelExportBtn)
-            cancelExportBtn.addEventListener('click', closeExportModal);
-          if (confirmExportBtn)
-            confirmExportBtn.addEventListener(
-              'click',
-              confirmAndDownloadExport
-            );
-        }
+          // Upload
+          uploadButton?.addEventListener('click', () => csvFileInput?.click());
+          dropZone?.addEventListener('click', () => csvFileInput?.click());
+          dropZone?.addEventListener('dragover', handleDragOver);
+          dropZone?.addEventListener('dragleave', handleDragLeave);
+          dropZone?.addEventListener('drop', handleDrop);
+          csvFileInput?.addEventListener('change', handleFileSelect);
 
-        // --- Settings Functions ---
-        function updateSettingsUI() {
-          exportCountInput.value = exportCountN;
-          if (slidingWindowWeeks % 52 === 0 && slidingWindowWeeks > 0) {
-            windowDurationInput.value = slidingWindowWeeks / 52;
-            windowUnitSelect.value = 'years';
-          } else if (slidingWindowWeeks % 4 === 0 && slidingWindowWeeks > 0) {
-            windowDurationInput.value = slidingWindowWeeks / 4;
-            windowUnitSelect.value = 'months';
-          } else {
-            windowDurationInput.value = slidingWindowWeeks;
-            windowUnitSelect.value = 'weeks';
-          }
-        }
-        function handleApplySettings() {
-          const duration = parseInt(windowDurationInput.value, 10);
-          const unit = windowUnitSelect.value;
-          const newExportCount = parseInt(exportCountInput.value, 10);
-          if (
-            isNaN(newExportCount) ||
-            newExportCount < 1 ||
-            newExportCount > 100
-          ) {
-            updateStatus('Export count must be between 1 and 100.', true);
-            return;
-          }
-          if (isNaN(duration) || duration < 1) {
-            updateStatus('Window duration must be a positive number.', true);
-            return;
-          }
-          let newWindowWeeks;
-          if (unit === 'months') {
-            newWindowWeeks = duration * 4;
-          } else if (unit === 'years') {
-            newWindowWeeks = duration * 52;
-          } else {
-            newWindowWeeks = duration;
-          }
-          if (
-            processedData.allWeeks.length > 0 &&
-            newWindowWeeks > processedData.allWeeks.length
-          ) {
-            updateStatus(
-              `Window duration (${newWindowWeeks} weeks) cannot exceed available data range (${processedData.allWeeks.length} weeks).`,
-              true
-            );
-            return;
-          }
-          if (newWindowWeeks < 1) {
-            updateStatus('Window duration must be at least 1 week.', true);
-            return;
-          }
-          const settingsChanged =
-            newWindowWeeks !== slidingWindowWeeks ||
-            newExportCount !== exportCountN;
-          slidingWindowWeeks = newWindowWeeks;
-          exportCountN = newExportCount;
-          exportImageBtn.textContent = `Export Top ${exportCountN}`;
-          settingsSection.style.display = 'none';
-          if (settingsChanged && processedData.rawData.length > 0) {
-            updateStatus('Applying settings and re-processing...');
-            setTimeout(() => {
-              try {
-                processListeningData(processedData.rawData);
-                updateStatus('Settings applied successfully.');
-                currentWeekIndex = -1;
-                selectedHistoryEntity = { key: null, type: null };
-                updateChartOrList();
-              } catch (error) {
-                console.error(
-                  'Error re-processing data after settings change:',
-                  error
-                );
-                updateStatus(
-                  `Error applying settings: ${
-                    error.message || 'Unknown error'
-                  }.`,
-                  true
-                );
-              }
-            }, 10);
-          } else if (!settingsChanged) {
-            updateStatus('Settings unchanged.');
-          } else {
-            updateStatus('Settings saved. Upload data to see changes.', false);
-          }
+          // Controls
+          entityTypeSelect?.addEventListener('change', handleEntityTypeChange);
+          searchInput?.addEventListener('input', handleSearchInput);
+          searchInput?.addEventListener('blur', () =>
+            setTimeout(
+              () => suggestionsDiv?.classList.add('hidden'),
+              CONSTANTS.SEARCH_DEBOUNCE_MS
+            )
+          );
+          suggestionsDiv?.addEventListener('mousedown', handleSuggestionClick); // mousedown fires before blur
+          prevWeekBtn?.addEventListener('click', () => navigateWeek(-1));
+          nextWeekBtn?.addEventListener('click', () => navigateWeek(1));
+          jumpToWeekBtn?.addEventListener('click', handleJumpToWeek);
+          exportImageBtn?.addEventListener('click', handleExportImageClick);
+          settingsBtn?.addEventListener('click', openSettings);
+
+          // List/History Interaction
+          listContainer?.addEventListener('click', handleListItemClick);
+          backToListBtn?.addEventListener('click', handleBackButtonClick);
+          artistCardContainer?.addEventListener('click', handleArtistCardClick);
+          artistTopSongsContainer?.addEventListener(
+            'click',
+            handleArtistTopSongClick
+          );
+
+          // Clickable Dates (delegated)
+          detailsInfoContainer?.addEventListener('click', handleWeekDateClick);
+          artistTopSongsContainer?.addEventListener(
+            'click',
+            handleWeekDateClick
+          ); // Also handles clicks in top songs list
+          weekNavContainer?.addEventListener('click', handleWeekDateClick); // For current week display
+
+          // Settings Modal
+          closeSettingsBtn?.addEventListener('click', closeSettings);
+          applySettingsBtn?.addEventListener('click', handleApplySettings);
+
+          // Export Modal
+          cancelExportBtn?.addEventListener('click', closeExportModal);
+          confirmExportBtn?.addEventListener('click', confirmAndDownloadExport);
         }
 
         // --- Event Handlers ---
+
+        // File Upload Handlers
         function handleDragOver(event) {
           event.preventDefault();
-          dropZone.classList.add('dragover');
+          dropZone?.classList.add('dragover');
         }
+
         function handleDragLeave() {
-          dropZone.classList.remove('dragover');
+          dropZone?.classList.remove('dragover');
         }
+
         function handleDrop(event) {
           event.preventDefault();
-          dropZone.classList.remove('dragover');
-          const file = event.dataTransfer.files[0];
+          dropZone?.classList.remove('dragover');
+          const file = event.dataTransfer?.files[0];
           if (file && file.type === 'text/csv') {
             handleFile(file);
           } else {
             updateStatus('Please drop a CSV file.', true);
           }
         }
+
         function handleFileSelect(event) {
-          const file = event.target.files[0];
+          const file = event.target?.files[0];
           if (file) {
             handleFile(file);
           }
         }
+
+        // Control Handlers
         function handleEntityTypeChange() {
+          // If not viewing specific history, update the list based on selection
           if (!selectedHistoryEntity.key) {
             updateChartOrList();
           }
-        } // Only update list view
+        }
 
-        /** Handles search input - searches both tracks and artists */
+        /** Handles search input, filters tracks and artists, sorts, displays suggestions */
         function handleSearchInput(event) {
           const query = event.target.value.toLowerCase().trim();
           suggestionsDiv.innerHTML = '';
@@ -1501,49 +1463,40 @@
 
           let allMatches = [...trackMatches, ...artistMatches];
 
-          // Custom Sort Logic
+          // Sort results: Exact Match > Starts With > Artist Priority > Alphabetical
           allMatches.sort((a, b) => {
             const aLower = a.display.toLowerCase();
             const bLower = b.display.toLowerCase();
             const queryLower = query;
 
-            // 1. Exact display name match (case-insensitive)
-            if (aLower === queryLower && bLower !== queryLower) return -1;
-            if (bLower === queryLower && aLower !== queryLower) return 1;
-
-            // 2. Exact artist name match (for artist results, case-insensitive)
-            const aIsExactArtist = a.type === 'artist' && aLower === queryLower;
-            const bIsExactArtist = b.type === 'artist' && bLower === queryLower;
-            if (aIsExactArtist && !bIsExactArtist) return -1;
-            if (bIsExactArtist && !aIsExactArtist) return 1;
-
-            // 3. Starts with query (case-insensitive)
+            // Priority checks
+            const aIsExact = aLower === queryLower;
+            const bIsExact = bLower === queryLower;
             const aStartsWith = aLower.startsWith(queryLower);
             const bStartsWith = bLower.startsWith(queryLower);
-            if (aStartsWith && !bStartsWith) return -1;
-            if (bStartsWith && !aStartsWith) return 1;
 
-            // 4. Artist priority (slight boost if both contain but don't start)
+            if (aIsExact !== bIsExact) return aIsExact ? -1 : 1; // Exact matches first
+            if (aStartsWith !== bStartsWith) return aStartsWith ? -1 : 1; // StartsWith matches second
+
+            // Slight bias for artist if neither starts with query
             if (!aStartsWith && !bStartsWith) {
               if (a.type === 'artist' && b.type === 'track') return -1;
               if (b.type === 'artist' && a.type === 'track') return 1;
             }
 
-            // 5. Alphabetical fallback
-            return a.display.localeCompare(b.display);
+            return a.display.localeCompare(b.display); // Alphabetical fallback
           });
 
           if (allMatches.length > 0) {
-            // No slice limit anymore
             allMatches.forEach((match) => {
               const div = document.createElement('div');
               div.dataset.key = match.key;
-              div.dataset.type = match.type; // Store type
-              let textHTML = '';
-              if (match.type === 'track') {
-                textHTML = `<span class="suggestion-type">[Track]</span> ${match.display} <span class="suggestion-artist">- ${match.artist}</span>`;
-              } else {
-                textHTML = `<span class="suggestion-type">[Artist]</span> ${match.display}`;
+              div.dataset.type = match.type;
+              let textHTML = `<span class="suggestion-type">[${
+                match.type.charAt(0).toUpperCase() + match.type.slice(1)
+              }]</span> ${match.display}`;
+              if (match.type === 'track' && match.artist) {
+                textHTML += ` <span class="suggestion-artist">- ${match.artist}</span>`;
               }
               div.innerHTML = textHTML;
               suggestionsDiv.appendChild(div);
@@ -1554,32 +1507,31 @@
           }
         }
 
-        /** Handles clicking a search suggestion */
+        /** Handles clicking a suggestion from the search dropdown */
         function handleSuggestionClick(event) {
-          const targetDiv = event.target.closest('div[data-key]');
+          const targetDiv = event.target.closest('div[data-key][data-type]');
           if (targetDiv) {
             const key = targetDiv.dataset.key;
-            const type = targetDiv.dataset.type; // Get type
+            const type = targetDiv.dataset.type;
 
             if (key && type) {
               selectedHistoryEntity = { key: key, type: type };
-              // Update the main toggle to reflect the selection for visual consistency
-              entityTypeSelect.value = type;
-              // Clear search bar and hide suggestions
-              searchInput.value = '';
+              entityTypeSelect.value = type; // Sync dropdown
+              searchInput.value = ''; // Clear search
               suggestionsDiv.classList.add('hidden');
-              // Update the view
-              updateChartOrList();
+              updateChartOrList(); // Show history view
             }
           }
         }
 
-        /** Handles clicking an item in the main list */
+        /** Handles clicking an item in the main Top 100 list */
         function handleListItemClick(event) {
-          const listItem = event.target.closest('.chart-row[data-key]');
-          if (listItem) {
-            const key = listItem.dataset.key;
+          // Find the closest ancestor which is a chart row and has a data-key
+          const chartRowElement = event.target.closest('.chart-row[data-key]');
+          if (chartRowElement) {
+            const key = chartRowElement.dataset.key;
             const type = entityTypeSelect.value; // Type is determined by the current list view
+            // Ensure key is valid (not the placeholder '-')
             if (key && type && key !== '-') {
               selectedHistoryEntity = { key: key, type: type };
               searchInput.value = ''; // Clear search
@@ -1588,80 +1540,80 @@
           }
         }
 
-        /** Handles clicking the "Back" button from history view */
+        /** Handles clicking the 'Back to Top List' button */
         function handleBackButtonClick() {
-          selectedHistoryEntity = { key: null, type: null }; // Clear selection
+          selectedHistoryEntity = { key: null, type: null }; // Clear history selection
           searchInput.value = '';
           updateChartOrList(); // Renders list based on entityTypeSelect
         }
 
-        /** Handles clicking the artist card in track history view */
+        /** Handles clicking the artist card shown in track history view */
         function handleArtistCardClick(event) {
+          // Get the artist key stored on the card element
           const artistKey = event.currentTarget.dataset.artistKey;
           if (artistKey && processedData.artists.has(artistKey)) {
             selectedHistoryEntity = { key: artistKey, type: 'artist' };
-            entityTypeSelect.value = 'artist'; // Update toggle
+            entityTypeSelect.value = 'artist'; // Update dropdown to 'artist'
             searchInput.value = '';
-            updateChartOrList();
+            updateChartOrList(); // Show artist history
           } else {
             console.warn('Could not find artist data for key:', artistKey);
+            updateStatus('Could not load artist history.', true);
           }
         }
 
-        /** Handles clicking a track from the artist's top songs list */
+        /** Handles clicking a track name within the Artist's Top Songs list */
         function handleArtistTopSongClick(event) {
+          // Target the specific clickable span with the track key
           const target = event.target.closest(
             '.artist-song-name[data-track-key]'
           );
           if (target) {
-            event.stopPropagation();
+            event.stopPropagation(); // Prevent triggering other click listeners (like week date)
             const trackKey = target.dataset.trackKey;
             if (trackKey && processedData.tracks.has(trackKey)) {
               selectedHistoryEntity = { key: trackKey, type: 'track' };
-              entityTypeSelect.value = 'track'; // Update toggle
+              entityTypeSelect.value = 'track'; // Update dropdown to 'track'
               searchInput.value = '';
-              updateChartOrList();
+              updateChartOrList(); // Show track history
             }
           }
         }
 
-        // --- Other Handlers (JumpToWeek, WeekDateClick, NavigateWeek) ---
+        /** Handles clicking the 'Go' button for jumping to a specific week */
         function handleJumpToWeek() {
           const dateString = weekJumpInput.value;
           if (!dateString) {
-            updateStatus('Please select a date.', true);
+            updateStatus('Please select a date to jump to.', true);
             return;
           }
-          if (
-            !checkDateFns() ||
-            !processedData.allWeeks ||
-            processedData.allWeeks.length === 0
-          ) {
-            updateStatus('Data not processed or date library error.', true);
+          if (!processedData.allWeeks || processedData.allWeeks.length === 0) {
+            updateStatus('No data loaded to jump within.', true);
             return;
           }
           try {
-            const selectedDate = dateFns.parseISO(dateString + 'T00:00:00');
+            const selectedDate = dateFns.parseISO(dateString + 'T00:00:00'); // Ensure parsing as local date start
             if (!dateFns.isValid(selectedDate)) {
               updateStatus('Invalid date selected.', true);
               return;
             }
             jumpToWeek(selectedDate);
           } catch (error) {
-            console.error('Error jumping to week:', error);
+            console.error('Error parsing jump-to-week date:', error);
             updateStatus('Error processing selected date.', true);
           }
         }
+
+        /** Handles clicks on elements with 'clickable-week-date' class and data-date attribute */
         function handleWeekDateClick(event) {
-          const target = event.target.closest('.clickable-week-date');
+          const target = event.target.closest(
+            '.clickable-week-date[data-date]'
+          );
           if (target && target.dataset.date) {
             const dateString = target.dataset.date;
-            if (
-              !checkDateFns() ||
-              !processedData.allWeeks ||
-              processedData.allWeeks.length === 0
-            )
-              return;
+            if (!processedData.allWeeks || processedData.allWeeks.length === 0)
+              return; // No data
+
             try {
               const selectedDate = dateFns.parseISO(dateString + 'T00:00:00');
               if (!dateFns.isValid(selectedDate)) return;
@@ -1672,36 +1624,52 @@
             }
           }
         }
+
+        /** Navigates weeks forward or backward in the list view */
         function navigateWeek(direction) {
           if (!processedData.allWeeks || processedData.allWeeks.length === 0)
             return;
+
           const maxIndex = processedData.allWeeks.length - 1;
-          if (currentWeekIndex === -1) currentWeekIndex = maxIndex;
-          currentWeekIndex = Math.max(
+          // If currentWeekIndex is -1 (latest), set it to maxIndex before navigating
+          const currentIndex =
+            currentWeekIndex === -1 ? maxIndex : currentWeekIndex;
+
+          // Calculate new index, clamping between 0 and maxIndex
+          const newIndex = Math.max(
             0,
-            Math.min(maxIndex, currentWeekIndex + direction)
+            Math.min(maxIndex, currentIndex + direction)
           );
-          selectedHistoryEntity = { key: null, type: null };
-          searchInput.value = '';
-          updateChartOrList();
+
+          if (newIndex !== currentWeekIndex) {
+            currentWeekIndex = newIndex;
+            selectedHistoryEntity = { key: null, type: null }; // Go back to list view
+            searchInput.value = '';
+            updateChartOrList();
+          }
         }
+
+        /** Jumps the list view to the week containing the selectedDate */
         function jumpToWeek(selectedDate) {
           const targetWeekStartDate = getWeekStartDate(selectedDate);
+          // Find the index of this week start date in our sorted array
           const targetIndex = processedData.allWeeks.findIndex((week) =>
             dateFns.isSameDay(week, targetWeekStartDate)
           );
+
           if (targetIndex !== -1) {
             currentWeekIndex = targetIndex;
-            selectedHistoryEntity = { key: null, type: null };
+            selectedHistoryEntity = { key: null, type: null }; // Ensure list view
             searchInput.value = '';
-            updateStatus('');
+            updateStatus(''); // Clear any previous error
             updateChartOrList();
           } else {
+            // Date is outside the range of the data
             const firstWeek = processedData.allWeeks[0];
             const lastWeek =
               processedData.allWeeks[processedData.allWeeks.length - 1];
             updateStatus(
-              `Selected date is outside the available range (${formatDateKey(
+              `Selected date is outside the available data range (${formatDateKey(
                 firstWeek
               )} to ${formatDateKey(lastWeek)}).`,
               true
@@ -1709,90 +1677,176 @@
           }
         }
 
-        // Status Update Helper (Unchanged)
-        function updateStatus(message, isError = false) {
-          if (!statusDiv) return;
-          statusDiv.textContent = message;
-          statusDiv.classList[isError ? 'add' : 'remove']('text-red-500');
+        // Settings Handlers
+        function openSettings() {
+          settingsSection.style.display = 'block';
+          updateSettingsUI(); // Ensure UI reflects current settings
         }
 
-        // --- File Handling and Parsing --- (Added try/catch in complete callback)
-        function handleFile(file) {
-          updateStatus(`Processing ${file.name}...`);
-          console.log('Starting file processing...');
-          resetState(); // Reset application state
+        function closeSettings() {
+          settingsSection.style.display = 'none';
+        }
 
+        /** Validates and applies settings, re-processing data if needed */
+        function handleApplySettings() {
+          const duration = parseInt(windowDurationInput.value, 10);
+          const unit = windowUnitSelect.value;
+          const newExportCount = parseInt(exportCountInput.value, 10);
+
+          // Validate Export Count
           if (
-            typeof Papa === 'undefined' ||
-            !Papa ||
-            typeof Papa.parse !== 'function'
+            isNaN(newExportCount) ||
+            newExportCount < CONSTANTS.MIN_EXPORT_COUNT ||
+            newExportCount > CONSTANTS.MAX_EXPORT_COUNT
           ) {
-            updateStatus('Error: CSV parsing library failed.', true);
-            resetState();
+            updateStatus(
+              `Export count must be between ${CONSTANTS.MIN_EXPORT_COUNT} and ${CONSTANTS.MAX_EXPORT_COUNT}.`,
+              true
+            );
             return;
           }
+
+          // Validate Window Duration
+          if (isNaN(duration) || duration < CONSTANTS.MIN_WINDOW_DURATION) {
+            updateStatus(
+              `Window duration must be at least ${CONSTANTS.MIN_WINDOW_DURATION} ${unit}.`,
+              true
+            );
+            return;
+          }
+
+          // Calculate new window duration in weeks
+          let newWindowWeeks;
+          switch (unit) {
+            case 'months':
+              newWindowWeeks = duration * 4;
+              break;
+            case 'years':
+              newWindowWeeks = duration * 52;
+              break;
+            default:
+              newWindowWeeks = duration; // Weeks
+          }
+
+          // Check against available data range if data is loaded
+          if (
+            processedData.allWeeks.length > 0 &&
+            newWindowWeeks > processedData.allWeeks.length
+          ) {
+            updateStatus(
+              `Window duration (${newWindowWeeks} weeks) cannot exceed available data range (${processedData.allWeeks.length} weeks).`,
+              true
+            );
+            return;
+          }
+          if (newWindowWeeks < 1) {
+            // Should be caught by MIN_WINDOW_DURATION check, but double-check
+            updateStatus('Window duration must be at least 1 week.', true);
+            return;
+          }
+
+          const settingsChanged =
+            newWindowWeeks !== slidingWindowWeeks ||
+            newExportCount !== exportCountN;
+
+          // Update global settings state
+          slidingWindowWeeks = newWindowWeeks;
+          exportCountN = newExportCount;
+          exportImageBtn.textContent = `Export Top ${exportCountN}`; // Update button text
+
+          closeSettings(); // Hide settings panel
+
+          if (settingsChanged && processedData.rawData.length > 0) {
+            // Re-process data only if settings actually changed and data exists
+            updateStatus('Applying settings and re-processing data...');
+            // Use setTimeout to allow UI update before potentially long processing
+            setTimeout(() => {
+              try {
+                processListeningData(processedData.rawData); // Reprocess with new settings
+                updateStatus(
+                  'Settings applied and data re-processed successfully.'
+                );
+                // Reset view to the latest week's list
+                currentWeekIndex = -1;
+                selectedHistoryEntity = { key: null, type: null };
+                updateChartOrList();
+              } catch (error) {
+                console.error(
+                  'Error re-processing data after settings change:',
+                  error
+                );
+                updateStatus(
+                  `Error applying settings: ${
+                    error.message || 'Unknown error'
+                  }.`,
+                  true
+                );
+                // Consider resetting settings to previous state or disabling UI
+              }
+            }, 10); // Small delay
+          } else if (!settingsChanged) {
+            updateStatus('Settings unchanged.');
+          } else {
+            // Settings changed, but no data loaded yet
+            updateStatus('Settings saved. Upload data to see changes.', false);
+          }
+        }
+
+        // --- File Handling ---
+
+        /** Parses the selected CSV file and initiates processing */
+        function handleFile(file) {
+          if (!file) return;
+          updateStatus(`Processing ${file.name}...`);
+          console.log('Starting file processing...');
+          resetState(); // Reset application state before processing new file
+
           Papa.parse(file, {
             header: true,
             skipEmptyLines: true,
-            dynamicTyping: { uts: true },
+            dynamicTyping: { uts: true }, // Attempt to parse 'uts' as number
             complete: (results) => {
-              console.log('CSV Parsing complete. Rows:', results.data.length);
+              console.log('CSV Parsing complete. Rows:', results.data?.length);
+
               if (results.errors.length > 0) {
+                console.error('CSV Parsing Errors:', results.errors);
                 updateStatus(
-                  `Error parsing CSV: ${results.errors[0].message}`,
+                  `Error parsing CSV: ${results.errors[0].message}. Check console.`,
                   true
                 );
+                resetState(); // Reset on critical parse error
                 return;
               }
-              if (!results.data.length) {
-                updateStatus('CSV file is empty or invalid.', true);
-                return;
-              }
-              const requiredColumns = [
-                'uts',
-                'artist',
-                'artist_mbid',
-                'track',
-                'track_mbid',
-                'album_mbid',
-              ];
-              const actualColumns = Object.keys(results.data[0] || {});
-              const missingColumns = requiredColumns.filter(
-                (col) => !actualColumns.includes(col)
-              );
-              if (missingColumns.length > 0) {
+              if (!results.data || results.data.length === 0) {
                 updateStatus(
-                  `Warning: Input CSV might be missing required columns (${missingColumns.join(
-                    ', '
-                  )}). Grouping/Art accuracy may be reduced.`,
-                  false
+                  'CSV file is empty or could not be parsed correctly.',
+                  true
                 );
+                resetState();
+                return;
               }
 
+              // Validate required columns (optional, provide warning)
+              validateCsvColumns(results.data[0]);
+
               processedData.rawData = results.data; // Store raw data for re-processing
-              updateStatus('Processing data...');
+              updateStatus('Parsing complete. Processing data...');
 
               // Use setTimeout to allow UI update before potentially long processing
               setTimeout(() => {
                 try {
-                  // Add try...catch here
                   console.log('Calling processListeningData...');
                   processListeningData(processedData.rawData); // Initial processing
                   console.log('processListeningData finished.');
 
                   updateStatus(`Processed ${file.name}. Chart ready.`);
-                  if (uploadSection) uploadSection.classList.add('hidden');
-                  if (chartSection) chartSection.classList.remove('hidden');
+                  uploadSection?.classList.add('hidden');
+                  chartSection?.classList.remove('hidden');
                   currentWeekIndex = -1; // Start at latest week
-                  selectedHistoryEntity = { key: null, type: null }; // Ensure history view is not shown
-                  // populateHistoryDropdown(); // Removed
-                  setDateInputRange();
-                  console.log(
-                    'Calling updateChartOrList after file processing...'
-                  );
-                  updateChartOrList();
-                  console.log('updateChartOrList finished.');
-                  updateSettingsUI(); // Set initial settings values
+                  selectedHistoryEntity = { key: null, type: null };
+                  setDateInputRange(); // Set min/max for date picker
+                  updateChartOrList(); // Initial render
+                  updateSettingsUI(); // Ensure settings UI matches loaded state
                 } catch (error) {
                   console.error('Error during post-parse processing:', error);
                   updateStatus(
@@ -1801,90 +1855,262 @@
                     }. Check console.`,
                     true
                   );
-                  resetState(); // Reset on error
+                  resetState(); // Reset on processing error
                 }
-              }, 10);
+              }, 10); // Small delay
             },
             error: (error) => {
+              console.error('PapaParse Error:', error);
               updateStatus(`Error parsing file: ${error.message}`, true);
               resetState();
             },
           });
         }
 
-        // --- Reset State ---
+        /** Checks for essential columns and warns if missing */
+        function validateCsvColumns(firstRow) {
+          const requiredColumns = ['uts', 'artist', 'track']; // Absolute minimum
+          const recommendedColumns = [
+            'artist_mbid',
+            'track_mbid',
+            'album_mbid',
+          ]; // For better accuracy/art
+          const actualColumns = Object.keys(firstRow || {});
+
+          const missingRequired = requiredColumns.filter(
+            (col) => !actualColumns.includes(col)
+          );
+          if (missingRequired.length > 0) {
+            // This might be a fatal error depending on your logic, adjust severity
+            updateStatus(
+              `Error: Input CSV is missing required columns: ${missingRequired.join(
+                ', '
+              )}. Processing cannot continue.`,
+              true
+            );
+            throw new Error(
+              `Missing required CSV columns: ${missingRequired.join(', ')}`
+            ); // Stop processing
+          }
+
+          const missingRecommended = recommendedColumns.filter(
+            (col) => !actualColumns.includes(col)
+          );
+          if (missingRecommended.length > 0) {
+            updateStatus(
+              `Warning: Input CSV is missing recommended columns (${missingRecommended.join(
+                ', '
+              )}). Grouping/Art accuracy may be reduced.`,
+              false
+            );
+          }
+        }
+
+        // --- State Management ---
+
+        /** Resets the application to its initial state */
         function resetState() {
-          processedData = {
-            tracks: new Map(),
-            artists: new Map(),
-            allWeeks: [],
-            rawData: [],
-          };
+          processedData = createEmptyProcessedData();
+
           if (mainChartInstance) {
             mainChartInstance.destroy();
             mainChartInstance = null;
           }
-          if (chartSection) chartSection.classList.add('hidden');
-          if (uploadSection) uploadSection.classList.remove('hidden');
-          // History select removed
-          selectedHistoryEntity = { key: null, type: null }; // Reset history selection
-          currentWeekIndex = -1;
-          if (chartInfo) chartInfo.textContent = '';
+
+          // Reset UI Elements
+          chartSection?.classList.add('hidden');
+          uploadSection?.classList.remove('hidden');
+          settingsSection.style.display = 'none';
+          detailsDisplayArea.style.display = 'none';
+          historyViewControls.style.display = 'none';
+          artistTopSongsContainer.style.display = 'none';
+          listContainer.innerHTML = '';
+          listHeaderContainer.style.display = 'none';
+          chartContainerDiv.style.display = 'none'; // Hide chart area too
+          chartInfo.textContent = '';
           updateStatus('No file selected.');
-          if (searchInput) searchInput.value = '';
-          if (suggestionsDiv) suggestionsDiv.classList.add('hidden');
-          if (listContainer) listContainer.innerHTML = '';
-          if (detailsDisplayArea) detailsDisplayArea.style.display = 'none';
-          if (historyViewControls) historyViewControls.style.display = 'none';
-          if (weekJumpInput) {
-            weekJumpInput.min = '';
-            weekJumpInput.max = '';
-            weekJumpInput.value = '';
-          }
-          if (artistTopSongsContainer)
-            artistTopSongsContainer.style.display = 'none';
-          slidingWindowWeeks = 4;
-          exportCountN = 15;
-          if (exportImageBtn)
-            exportImageBtn.textContent = `Export Top ${exportCountN}`;
-          if (settingsSection) settingsSection.style.display = 'none';
+          searchInput.value = '';
+          suggestionsDiv.innerHTML = '';
+          suggestionsDiv.classList.add('hidden');
+          weekJumpInput.min = '';
+          weekJumpInput.max = '';
+          weekJumpInput.value = '';
+          currentWeekDisplay.innerHTML = 'Week: -';
+
+          // Reset variables
+          selectedHistoryEntity = { key: null, type: null };
+          currentWeekIndex = -1;
+          slidingWindowWeeks = CONSTANTS.DEFAULT_WINDOW_WEEKS; // Reset to default
+          exportCountN = CONSTANTS.DEFAULT_EXPORT_COUNT; // Reset to default
+          tempExportFilename = '';
+
+          // Reset button states
+          updateWeekNavControls(); // Disables buttons if no data
+          exportImageBtn.textContent = `Export Top ${exportCountN}`;
+          exportImageBtn.disabled = true; // Disable until data is loaded
+
+          // Update settings UI to reflect defaults
           updateSettingsUI();
         }
 
-        // --- Data Processing Logic --- (Ensure artistKey is stored on track details)
-        function processListeningData(data) {
+        /** Updates the settings modal UI elements to reflect current state */
+        function updateSettingsUI() {
+          exportCountInput.value = exportCountN;
+
+          // Determine best unit to display based on slidingWindowWeeks
+          if (slidingWindowWeeks % 52 === 0 && slidingWindowWeeks >= 52) {
+            windowDurationInput.value = slidingWindowWeeks / 52;
+            windowUnitSelect.value = 'years';
+          } else if (slidingWindowWeeks % 4 === 0 && slidingWindowWeeks >= 4) {
+            // Prioritize months if divisible by 4 (and not a whole year)
+            windowDurationInput.value = slidingWindowWeeks / 4;
+            windowUnitSelect.value = 'months';
+          } else {
+            // Default to weeks
+            windowDurationInput.value = slidingWindowWeeks;
+            windowUnitSelect.value = 'weeks';
+          }
+        }
+
+        /** Sets the min and max attributes for the week jump date input */
+        function setDateInputRange() {
+          if (
+            !weekJumpInput ||
+            !processedData.allWeeks ||
+            processedData.allWeeks.length === 0
+          )
+            return;
+          try {
+            weekJumpInput.min = formatDateKey(processedData.allWeeks[0]);
+            weekJumpInput.max = formatDateKey(
+              processedData.allWeeks[processedData.allWeeks.length - 1]
+            );
+          } catch (e) {
+            console.error('Error setting date input range:', e);
+          }
+        }
+
+        /** Updates the status message display */
+        function updateStatus(message, isError = false) {
+          if (!statusDiv) return;
+          statusDiv.textContent = message;
+          statusDiv.classList.toggle('text-red-500', isError); // More concise toggle
+          statusDiv.classList.toggle('text-gray-600', !isError); // Ensure default color is set
+        }
+
+        /** Updates the enabled/disabled state of week navigation buttons */
+        function updateWeekNavControls() {
+          if (!prevWeekBtn || !nextWeekBtn) return;
+          const dataAvailable = processedData.allWeeks.length > 0;
+          const maxIndex = dataAvailable
+            ? processedData.allWeeks.length - 1
+            : 0;
+          const displayWeekIndex =
+            currentWeekIndex === -1 ? maxIndex : currentWeekIndex;
+
+          prevWeekBtn.disabled = !dataAvailable || displayWeekIndex <= 0;
+          nextWeekBtn.disabled = !dataAvailable || displayWeekIndex >= maxIndex;
+          // Also disable jump/export/settings if no data
+          jumpToWeekBtn.disabled = !dataAvailable;
+          weekJumpInput.disabled = !dataAvailable;
+          exportImageBtn.disabled = !dataAvailable || selectedHistoryEntity.key; // Disable in history view too
+          settingsBtn.disabled = !dataAvailable;
+        }
+
+        // --- Data Processing Logic ---
+
+        /** Processes the raw listening data into structured format with history */
+        function processListeningData(rawData) {
           console.log(
             `Processing listening data (Window: ${slidingWindowWeeks} weeks)...`
           );
-          processedData = {
-            tracks: new Map(),
-            artists: new Map(),
-            allWeeks: [],
-            rawData: data,
-          };
-          const weeklyCounts = new Map();
-          const entityDetails = { tracks: new Map(), artists: new Map() };
-          checkDateFns();
-          data.forEach((listen) => {
+          const startTime = performance.now();
+
+          // 1. Aggregate weekly counts and basic entity details
+          const { weeklyCounts, entityDetails } =
+            aggregateWeeklyCounts(rawData);
+          console.log(
+            `Step 1 (Aggregation) took: ${performance.now() - startTime} ms`
+          );
+          const step1Time = performance.now();
+
+          // 2. Get sorted list of all unique week start dates
+          const allWeeks = Array.from(weeklyCounts.keys())
+            .map(dateFns.parseISO)
+            .sort(dateFns.compareAsc);
+
+          if (allWeeks.length === 0) {
+            throw new Error('No valid listening data found after aggregation.');
+          }
+          processedData.allWeeks = allWeeks;
+
+          // 3. Calculate sliding window ranks for each week
+          const { tempTrackHistory, tempArtistHistory } =
+            calculateSlidingWindowRanks(allWeeks, weeklyCounts);
+          console.log(
+            `Step 2 (Sliding Window) took: ${performance.now() - step1Time} ms`
+          );
+          const step2Time = performance.now();
+
+          // 4. Calculate status, peak position, weeks on chart, etc. and finalize data structure
+          const finalTracks = calculateHistoryStats(
+            tempTrackHistory,
+            entityDetails.tracks
+          );
+          const finalArtists = calculateHistoryStats(
+            tempArtistHistory,
+            entityDetails.artists
+          );
+          console.log(
+            `Step 3 (History Stats) took: ${performance.now() - step2Time} ms`
+          );
+
+          // Update global state
+          processedData.tracks = finalTracks;
+          processedData.artists = finalArtists;
+
+          const endTime = performance.now();
+          console.log(
+            `Total data processing finished in ${endTime - startTime} ms.`
+          );
+        }
+
+        /** Step 1: Aggregates listens per week for tracks and artists */
+        function aggregateWeeklyCounts(rawData) {
+          const weeklyCounts = new Map(); // weekKey -> { trackCounts: Map, artistCounts: Map }
+          const entityDetails = { tracks: new Map(), artists: new Map() }; // key -> { details... }
+
+          rawData.forEach((listen) => {
+            // Basic validation
             if (typeof listen.uts !== 'number' || isNaN(listen.uts)) return;
+            const trackName = (listen.track || '').trim();
+            const artistName = (listen.artist || '').trim();
+            if (!trackName || !artistName) return; // Skip entries without track or artist
+
             const listenDate = dateFns.fromUnixTime(listen.uts);
             const weekStartDate = getWeekStartDate(listenDate);
             const weekKey = formatDateKey(weekStartDate);
-            const trackName = (listen.track || '').trim();
-            const artistName = (listen.artist || '').trim();
+
             const trackMbid = (listen.track_mbid || '').trim();
             const artistMbid = (listen.artist_mbid || '').trim();
             const albumMbid = (listen.album_mbid || '').trim();
-            if (!trackName || !artistName) return;
+
+            // Determine unique keys (prefer MBID, fallback to name/composite)
             const artistKey = artistMbid || artistName;
             const trackKey =
-              trackMbid || `${artistKey}${COMPOSITE_KEY_SEPARATOR}${trackName}`;
-            if (!weeklyCounts.has(weekKey))
+              trackMbid ||
+              `${artistKey}${CONSTANTS.COMPOSITE_KEY_SEPARATOR}${trackName}`;
+
+            // Initialize week if new
+            if (!weeklyCounts.has(weekKey)) {
               weeklyCounts.set(weekKey, {
                 trackCounts: new Map(),
                 artistCounts: new Map(),
               });
+            }
             const weekData = weeklyCounts.get(weekKey);
+
+            // Increment counts
             weekData.trackCounts.set(
               trackKey,
               (weekData.trackCounts.get(trackKey) || 0) + 1
@@ -1893,283 +2119,267 @@
               artistKey,
               (weekData.artistCounts.get(artistKey) || 0) + 1
             );
-            // Store details, including the artistKey for the track
-            function updateEntityDetail(
-              map,
-              key,
-              tName,
-              aName,
-              albMbid,
-              artKey
-            ) {
-              // Added artKey
-              let detail = map.get(key);
-              if (!detail) {
-                detail = {
-                  trackName: tName,
-                  artistName: aName,
-                  albumMbid: albMbid,
-                  artistKey: artKey, // Store the artist key (MBID or name)
-                  totalPlays: 0,
-                  firstPlayDate: listenDate,
-                  lastPlayDate: listenDate,
-                };
-                map.set(key, detail);
-              }
-              detail.totalPlays += 1;
-              if (
-                !detail.firstPlayDate ||
-                dateFns.compareAsc(listenDate, detail.firstPlayDate) < 0
-              )
-                detail.firstPlayDate = listenDate;
-              if (
-                !detail.lastPlayDate ||
-                dateFns.compareAsc(listenDate, detail.lastPlayDate) > 0
-              )
-                detail.lastPlayDate = listenDate;
-              if (!detail.trackName && tName) detail.trackName = tName;
-              if (!detail.artistName && aName) detail.artistName = aName;
-              if (!detail.albumMbid && albMbid) detail.albumMbid = albMbid;
-              if (!detail.artistKey && artKey) detail.artistKey = artKey; // Ensure artistKey is set
-            }
+
+            // Update entity details (only store necessary info once)
             updateEntityDetail(
               entityDetails.tracks,
               trackKey,
               trackName,
               artistName,
               albumMbid,
-              artistKey
-            ); // Pass artistKey
+              artistKey,
+              listenDate
+            );
             updateEntityDetail(
               entityDetails.artists,
               artistKey,
               null,
               artistName,
               null,
-              null
-            ); // Artist doesn't need artistKey stored on itself
+              null,
+              listenDate
+            );
           });
-          console.log('Weekly counts & entity details calculated.');
-          processedData.allWeeks = Array.from(weeklyCounts.keys())
-            .map(dateFns.parseISO)
-            .sort((a, b) => dateFns.compareAsc(a, b));
-          if (processedData.allWeeks.length === 0)
-            throw new Error('No valid listening data found.');
-          const tempTrackHistory = new Map();
-          const tempArtistHistory = new Map();
-          processedData.allWeeks.forEach((currentWeekDate) => {
+
+          return { weeklyCounts, entityDetails };
+        }
+
+        /** Helper for aggregateWeeklyCounts - Updates details for a track or artist */
+        function updateEntityDetail(
+          detailMap,
+          key,
+          trackName,
+          artistName,
+          albumMbid,
+          artistKey,
+          listenDate
+        ) {
+          let detail = detailMap.get(key);
+          if (!detail) {
+            // Initialize detail object only if it doesn't exist
+            detail = {
+              trackName: trackName, // Null for artists
+              artistName: artistName,
+              albumMbid: albumMbid, // Null for artists
+              artistKey: artistKey, // Store artist's key on track detail for linking
+              totalPlays: 0,
+              firstPlayDate: listenDate,
+              lastPlayDate: listenDate,
+              // History will be added later
+            };
+            detailMap.set(key, detail);
+          }
+
+          // Update stats regardless of whether it was just created or existed
+          detail.totalPlays += 1;
+          if (dateFns.compareAsc(listenDate, detail.firstPlayDate) < 0) {
+            detail.firstPlayDate = listenDate;
+          }
+          if (dateFns.compareAsc(listenDate, detail.lastPlayDate) > 0) {
+            detail.lastPlayDate = listenDate;
+          }
+
+          // Fill in potentially missing info if found later (e.g., MBID found after name-based entry)
+          // Note: This assumes MBID-based keys are preferred if available
+          if (!detail.trackName && trackName) detail.trackName = trackName;
+          if (!detail.artistName && artistName) detail.artistName = artistName;
+          if (!detail.albumMbid && albumMbid) detail.albumMbid = albumMbid;
+          if (!detail.artistKey && artistKey) detail.artistKey = artistKey;
+        }
+
+        /** Step 2: Calculates sliding window scores and ranks for each week */
+        function calculateSlidingWindowRanks(allWeeks, weeklyCounts) {
+          const tempTrackHistory = new Map(); // trackKey -> [{ week, rank, playsInWindow }]
+          const tempArtistHistory = new Map(); // artistKey -> [{ week, rank, playsInWindow }]
+
+          allWeeks.forEach((currentWeekDate) => {
             const windowTrackPlays = new Map();
             const windowArtistPlays = new Map();
+
+            // Sum counts over the sliding window period
             for (let i = 0; i < slidingWindowWeeks; i++) {
               const weekInWindowDate = dateFns.subWeeks(currentWeekDate, i);
               const weekInWindowKey = formatDateKey(weekInWindowDate);
+
               if (weeklyCounts.has(weekInWindowKey)) {
                 const weekData = weeklyCounts.get(weekInWindowKey);
-                weekData.trackCounts.forEach((c, key) =>
+                weekData.trackCounts.forEach((count, key) =>
                   windowTrackPlays.set(
                     key,
-                    (windowTrackPlays.get(key) || 0) + c
+                    (windowTrackPlays.get(key) || 0) + count
                   )
                 );
-                weekData.artistCounts.forEach((c, key) =>
+                weekData.artistCounts.forEach((count, key) =>
                   windowArtistPlays.set(
                     key,
-                    (windowArtistPlays.get(key) || 0) + c
+                    (windowArtistPlays.get(key) || 0) + count
                   )
                 );
               }
             }
+
+            // Rank tracks for the current week
             const rankedTracks = Array.from(windowTrackPlays.entries())
-              .sort(([, a], [, b]) => b - a)
-              .slice(0, 100);
-            rankedTracks.forEach(([key, plays], idx) => {
+              .sort(([, playsA], [, playsB]) => playsB - playsA)
+              .slice(0, CONSTANTS.MAX_LIST_ITEMS); // Limit to top N
+
+            rankedTracks.forEach(([key, plays], index) => {
               if (!tempTrackHistory.has(key)) tempTrackHistory.set(key, []);
               tempTrackHistory.get(key).push({
                 week: currentWeekDate,
-                rank: idx + 1,
+                rank: index + 1,
                 playsInWindow: plays,
               });
             });
+
+            // Rank artists for the current week
             const rankedArtists = Array.from(windowArtistPlays.entries())
-              .sort(([, a], [, b]) => b - a)
-              .slice(0, 100);
-            rankedArtists.forEach(([key, plays], idx) => {
+              .sort(([, playsA], [, playsB]) => playsB - playsA)
+              .slice(0, CONSTANTS.MAX_LIST_ITEMS); // Limit to top N
+
+            rankedArtists.forEach(([key, plays], index) => {
               if (!tempArtistHistory.has(key)) tempArtistHistory.set(key, []);
               tempArtistHistory.get(key).push({
                 week: currentWeekDate,
-                rank: idx + 1,
+                rank: index + 1,
                 playsInWindow: plays,
               });
             });
           });
-          function calculateStatusPeakAndWeeks(
-            tempHistoryMap,
-            finalDataMap,
-            detailsMap
-          ) {
-            tempHistoryMap.forEach((history, key) => {
-              const finalHistory = [];
-              history.sort((a, b) => dateFns.compareAsc(a.week, b.week));
-              for (let i = 0; i < history.length; i++) {
-                const currentEntry = history[i];
-                let status = null;
-                let peakStatus = null;
-                let currentOverallPeak = 101;
-                let playPercentChange = null;
-                let lastWeekRank = null;
-                if (
-                  typeof currentEntry.rank !== 'number' ||
-                  isNaN(currentEntry.rank)
-                ) {
-                  console.warn(
-                    `Invalid rank for ${key} on ${formatDateKey(
-                      currentEntry.week
-                    )}`
-                  );
-                  currentOverallPeak =
-                    i > 0 && finalHistory[i - 1].peakPosition !== null
-                      ? finalHistory[i - 1].peakPosition
-                      : 101;
-                  finalHistory.push({
-                    ...currentEntry,
-                    status,
-                    peakPosition:
-                      currentOverallPeak <= 100 ? currentOverallPeak : null,
-                    peakStatus,
-                    weeksOnChart: i + 1,
-                    playPercentChange,
-                    lastWeekRank,
-                  });
-                  continue;
-                }
-                currentOverallPeak = history
-                  .slice(0, i + 1)
-                  .reduce((minPeak, entry) => {
-                    if (typeof entry.rank === 'number' && !isNaN(entry.rank)) {
-                      return Math.min(minPeak, entry.rank);
-                    }
-                    return minPeak;
-                  }, 101);
-                const prevFinalHistoryEntry =
-                  i > 0 ? finalHistory[i - 1] : null;
-                const prevOverallPeak = prevFinalHistoryEntry
-                  ? prevFinalHistoryEntry.peakPosition !== null
-                    ? prevFinalHistoryEntry.peakPosition
-                    : 101
-                  : 101;
-                const prevWeekDate = dateFns.subWeeks(currentEntry.week, 1);
-                const prevHistoryEntryOriginal = i > 0 ? history[i - 1] : null;
-                const wasRankedLastWeek =
-                  prevHistoryEntryOriginal &&
-                  dateFns.isSameDay(
-                    prevHistoryEntryOriginal.week,
-                    prevWeekDate
-                  );
-                const prevRank = wasRankedLastWeek
-                  ? prevHistoryEntryOriginal.rank
-                  : null;
-                const prevPlays = wasRankedLastWeek
-                  ? prevHistoryEntryOriginal.playsInWindow
-                  : null;
-                lastWeekRank = prevRank;
-                if (
-                  prevPlays !== null &&
-                  typeof currentEntry.playsInWindow === 'number'
-                ) {
-                  if (prevPlays > 0) {
-                    playPercentChange =
-                      ((currentEntry.playsInWindow - prevPlays) / prevPlays) *
-                      100;
-                  } else if (currentEntry.playsInWindow > 0) {
-                    playPercentChange = Infinity;
-                  } else {
-                    playPercentChange = 0;
-                  }
-                }
-                const isNewOverallPeak = currentOverallPeak < prevOverallPeak;
-                const isAtOverallPeak =
-                  currentEntry.rank === currentOverallPeak;
-                if (isAtOverallPeak) {
-                  if (isNewOverallPeak) {
-                    peakStatus = 'PEAK';
-                  } else {
-                    if (prevRank !== null && prevRank > currentEntry.rank) {
-                      peakStatus = 'RE-PEAK';
-                    }
-                  }
-                }
-                if (prevRank !== null) {
-                  status = prevRank - currentEntry.rank;
-                } else {
-                  const hasHistoryBeforePrevWeek = history
-                    .slice(0, i)
-                    .some((h) => dateFns.compareAsc(h.week, prevWeekDate) < 0);
-                  if (hasHistoryBeforePrevWeek) {
-                    status = 'RE-ENTRY';
-                  } else {
-                    status = 'NEW';
-                  }
-                }
-                finalHistory.push({
-                  ...currentEntry,
-                  status,
-                  peakPosition:
-                    currentOverallPeak <= 100 ? currentOverallPeak : null,
-                  peakStatus,
-                  weeksOnChart: i + 1,
-                  playPercentChange,
-                  lastWeekRank,
-                });
-              }
-              const detailsFallback = {
-                totalPlays: 0,
-                firstPlayDate: null,
-                lastPlayDate: null,
-                trackName: 'Unknown Track',
-                artistName: 'Unknown Artist',
-                albumMbid: null,
-                artistKey: null,
-              };
-              const details = detailsMap.get(key) || detailsFallback;
-              if (!details.trackName && key.includes(COMPOSITE_KEY_SEPARATOR))
-                details.trackName = key.split(COMPOSITE_KEY_SEPARATOR)[1];
-              if (!details.artistName)
-                details.artistName = key.includes(COMPOSITE_KEY_SEPARATOR)
-                  ? key.split(COMPOSITE_KEY_SEPARATOR)[0]
-                  : finalDataMap === processedData.artists
-                  ? key
-                  : 'Unknown Artist';
-              if (!details.albumMbid && detailsMap.get(key)?.albumMbid)
-                details.albumMbid = detailsMap.get(key).albumMbid;
-              if (!details.artistKey && detailsMap.get(key)?.artistKey)
-                details.artistKey = detailsMap.get(key).artistKey;
-              finalDataMap.set(key, { ...details, history: finalHistory });
-            });
-          }
-          calculateStatusPeakAndWeeks(
-            tempTrackHistory,
-            processedData.tracks,
-            entityDetails.tracks
-          );
-          calculateStatusPeakAndWeeks(
-            tempArtistHistory,
-            processedData.artists,
-            entityDetails.artists
-          );
-          console.log(
-            'Data processing finished including status, peak, weeks & play change calculation.'
-          );
+
+          return { tempTrackHistory, tempArtistHistory };
         }
 
-        // --- Charting & List Logic ---
-        // populateHistoryDropdown removed
+        /** Step 3: Calculates peak, status, weeks on chart etc. for each entity's history */
+        function calculateHistoryStats(tempHistoryMap, detailsMap) {
+          const finalDataMap = new Map(); // key -> { ...details, history: [enriched history entries] }
 
+          tempHistoryMap.forEach((history, key) => {
+            // Ensure history is sorted chronologically
+            history.sort((a, b) => dateFns.compareAsc(a.week, b.week));
+
+            const enrichedHistory = [];
+            let overallPeakPosition = CONSTANTS.DEFAULT_PEAK_VALUE; // Start with a value indicating "not peaked yet"
+
+            for (let i = 0; i < history.length; i++) {
+              const currentEntry = history[i];
+              const prevWeekDate = dateFns.subWeeks(currentEntry.week, 1);
+
+              // Find the original history entry for the *exact* previous week, if it exists
+              const prevHistoryEntryOriginal = history.find(
+                (h) => i > 0 && dateFns.isSameDay(h.week, prevWeekDate)
+              );
+
+              const currentRank = currentEntry.rank;
+              const lastWeekRank = prevHistoryEntryOriginal
+                ? prevHistoryEntryOriginal.rank
+                : null;
+              const lastWeekPlays = prevHistoryEntryOriginal
+                ? prevHistoryEntryOriginal.playsInWindow
+                : null;
+
+              // Calculate current overall peak up to this point
+              // Note: This recalculates peak for every week, could optimize if needed
+              const currentOverallPeak = history
+                .slice(0, i + 1) // Include current entry
+                .reduce(
+                  (minPeak, entry) => Math.min(minPeak, entry.rank),
+                  CONSTANTS.DEFAULT_PEAK_VALUE
+                );
+
+              // Determine Peak Status
+              let peakStatus = null;
+              if (currentRank === currentOverallPeak) {
+                // Check if this week *set* a new overall peak compared to the peak *before* this week
+                const peakBeforeThisWeek =
+                  i > 0
+                    ? enrichedHistory[i - 1].peakPosition
+                    : CONSTANTS.DEFAULT_PEAK_VALUE;
+                if (currentOverallPeak < peakBeforeThisWeek) {
+                  peakStatus = 'PEAK'; // New absolute peak achieved this week
+                } else if (
+                  lastWeekRank !== null &&
+                  lastWeekRank > currentRank
+                ) {
+                  // If rank improved and matched the existing peak, it's a re-peak
+                  peakStatus = 'RE-PEAK';
+                }
+                // If it matched the peak but didn't improve from last week, no status change
+              }
+
+              // Determine Rank Status (Change from last week)
+              let status = null;
+              if (lastWeekRank !== null) {
+                status = lastWeekRank - currentRank; // Positive = Up, Negative = Down, 0 = Same
+              } else {
+                // Check if there's any history *before* the theoretical previous week
+                const hasHistoryBeforePrevWeek = history.some(
+                  (h) => i > 0 && dateFns.compareAsc(h.week, prevWeekDate) < 0
+                );
+                status = hasHistoryBeforePrevWeek ? 'RE-ENTRY' : 'NEW';
+              }
+
+              // Calculate Play Percentage Change
+              let playPercentChange = null;
+              if (
+                lastWeekPlays !== null &&
+                typeof currentEntry.playsInWindow === 'number'
+              ) {
+                if (lastWeekPlays > 0) {
+                  playPercentChange =
+                    ((currentEntry.playsInWindow - lastWeekPlays) /
+                      lastWeekPlays) *
+                    100;
+                } else if (currentEntry.playsInWindow > 0) {
+                  playPercentChange = Infinity; // Change from 0 to positive
+                } else {
+                  playPercentChange = 0; // 0 to 0
+                }
+              }
+
+              enrichedHistory.push({
+                ...currentEntry,
+                status: status, // NEW, RE-ENTRY, or rank difference number
+                peakPosition:
+                  currentOverallPeak <= CONSTANTS.MAX_LIST_ITEMS
+                    ? currentOverallPeak
+                    : null, // Store the best rank achieved *up to this week*
+                peakStatus: peakStatus, // PEAK, RE-PEAK, or null
+                weeksOnChart: i + 1, // Simple count of weeks in the history array
+                playPercentChange: playPercentChange,
+                lastWeekRank: lastWeekRank, // Store for display convenience
+              });
+            }
+
+            // Combine details with the enriched history
+            const details = detailsMap.get(key) || {}; // Get existing details or empty object
+            // Ensure basic info exists if somehow missed in aggregation
+            if (!details.artistName)
+              details.artistName = key.includes(
+                CONSTANTS.COMPOSITE_KEY_SEPARATOR
+              )
+                ? key.split(CONSTANTS.COMPOSITE_KEY_SEPARATOR)[0]
+                : finalDataMap === processedData.artists
+                ? key
+                : 'Unknown Artist';
+            if (
+              !details.trackName &&
+              key.includes(CONSTANTS.COMPOSITE_KEY_SEPARATOR)
+            )
+              details.trackName = key.split(
+                CONSTANTS.COMPOSITE_KEY_SEPARATOR
+              )[1];
+
+            finalDataMap.set(key, { ...details, history: enrichedHistory });
+          });
+
+          return finalDataMap;
+        }
+
+        // --- Rendering Functions ---
+
+        /** Main function to update the display (list or history chart) */
         function updateChartOrList() {
-          if (typeof Chart === 'undefined' || !Chart) {
-            updateStatus('Error: Charting library failed.', true);
-            return;
-          }
-          checkDateFns();
           if (
             !chartCanvas ||
             !listContainer ||
@@ -2180,11 +2390,14 @@
             !chartContainerDiv ||
             !listHeaderContainer
           ) {
-            console.error('Display containers not found.');
+            console.error('Critical display containers not found in the DOM.');
+            updateStatus('UI Error: Display elements missing.', true);
             return;
           }
           if (!processedData.allWeeks || processedData.allWeeks.length === 0) {
-            if (chartInfo) chartInfo.textContent = 'No chart data to display.';
+            if (chartInfo)
+              chartInfo.textContent =
+                'No chart data to display. Upload a CSV file.';
             if (mainChartInstance) {
               mainChartInstance.destroy();
               mainChartInstance = null;
@@ -2194,172 +2407,185 @@
             chartContainerDiv.style.display = 'none';
             detailsDisplayArea.style.display = 'none';
             historyViewControls.style.display = 'none';
-            updateWeekNavControls();
+            updateWeekNavControls(); // Disable buttons
+            exportImageBtn.style.display = 'flex'; // Keep export visible but disabled
+            settingsBtn.style.display = 'flex'; // Keep settings visible but disabled
             return;
           }
 
           const isHistoryView = !!selectedHistoryEntity.key;
-          const historyEntityType = selectedHistoryEntity.type; // 'track' or 'artist' or null
-          const listEntityType = entityTypeSelect.value; // 'track' or 'artist'
+          const activeEntityType = isHistoryView
+            ? selectedHistoryEntity.type
+            : entityTypeSelect.value; // Determine type based on view
+          const dataMap =
+            activeEntityType === 'track'
+              ? processedData.tracks
+              : processedData.artists;
 
-          // Destroy existing chart if switching views or entity
+          // Destroy existing chart if switching views or entity types
           if (mainChartInstance) {
             mainChartInstance.destroy();
             mainChartInstance = null;
           }
 
-          // Show/Hide relevant sections
+          // Configure visibility based on view mode
           listContainer.style.display = isHistoryView ? 'none' : 'block';
-          listHeaderContainer.style.display = isHistoryView ? 'none' : 'block'; // Header hidden on mobile anyway by CSS
+          listHeaderContainer.style.display = isHistoryView ? 'none' : 'block'; // CSS handles mobile hiding
           chartContainerDiv.style.display = isHistoryView ? 'block' : 'none';
           historyViewControls.style.display = isHistoryView ? 'block' : 'none';
           detailsDisplayArea.style.display = isHistoryView ? 'block' : 'none';
           weekNavContainer.style.display = !isHistoryView ? 'flex' : 'none';
           jumpToWeekContainer.style.display = !isHistoryView ? 'flex' : 'none';
-          exportImageBtn.style.display = !isHistoryView ? 'flex' : 'none'; // Only allow export from list view
+          exportImageBtn.style.display = !isHistoryView ? 'flex' : 'none'; // Only show export in list view
 
+          // --- Render Content ---
+          let viewTitle = '';
           if (isHistoryView) {
-            // --- History View ---
-            const dataMap =
-              historyEntityType === 'track'
-                ? processedData.tracks
-                : processedData.artists;
             const entityData = dataMap.get(selectedHistoryEntity.key);
-
             if (!entityData) {
               console.error(
-                `Data not found for ${historyEntityType} key: ${selectedHistoryEntity.key}`
+                `Data not found for ${activeEntityType} key: ${selectedHistoryEntity.key}`
+              );
+              updateStatus(
+                `Error: Could not load history for selected ${activeEntityType}.`,
+                true
               );
               handleBackButtonClick(); // Go back to list if data is missing
               return;
             }
 
             const displayName =
-              (historyEntityType === 'track'
+              activeEntityType === 'track'
                 ? entityData.trackName
-                : entityData.artistName) || selectedHistoryEntity.key;
-            chartTitle = `${
-              historyEntityType === 'track' ? 'Track' : 'Artist'
-            } History: ${displayName}`;
-            if (historyEntityType === 'track' && entityData.artistName) {
-              chartTitle += ` by ${entityData.artistName}`;
+                : entityData.artistName;
+            viewTitle = `${
+              activeEntityType === 'track' ? 'Track' : 'Artist'
+            } History: ${displayName || selectedHistoryEntity.key}`;
+            if (activeEntityType === 'track' && entityData.artistName) {
+              viewTitle += ` by ${entityData.artistName}`;
             }
 
-            // Render Details Panel
-            renderDetailsPanel(entityData, historyEntityType);
-
-            // Render Chart (needs a slight delay for canvas to be visible)
+            renderDetailsPanel(entityData, activeEntityType);
+            // Render chart *after* its container is visible
             setTimeout(
               () => renderHistoryChart(displayName, entityData.history),
               0
             );
           } else {
-            // --- List View ---
-            const dataMap =
-              listEntityType === 'track'
-                ? processedData.tracks
-                : processedData.artists;
+            // List View
             const displayWeekIndex =
               currentWeekIndex === -1
                 ? processedData.allWeeks.length - 1
                 : currentWeekIndex;
+            // Basic bounds check
             if (
               displayWeekIndex < 0 ||
               displayWeekIndex >= processedData.allWeeks.length
             ) {
-              console.error('Invalid week index');
-              return;
+              console.error('Invalid week index:', displayWeekIndex);
+              updateStatus('Error: Invalid week selected.', true);
+              return; // Or reset index
             }
+
             const displayWeekDate = processedData.allWeeks[displayWeekIndex];
             const displayWeekKey = formatDateKey(displayWeekDate);
-            chartTitle = `Top 100 ${listEntityType}s: Week of ${displayWeekKey}`;
+
+            viewTitle = `Top ${CONSTANTS.MAX_LIST_ITEMS} ${activeEntityType}s: Week of ${displayWeekKey}`;
             const listData = prepareTop100ListData(
-              listEntityType,
+              activeEntityType,
               dataMap,
               displayWeekKey
             );
-            renderTop100List(listData, listContainer); // Render the list
-            renderListHeader(); // Render header (will be hidden on mobile by CSS)
+
+            renderListHeader(); // Render header (CSS hides on mobile)
+            renderTop100List(listData, listContainer); // Render the list content
+
+            // Update the current week display span
             if (currentWeekDisplay) {
               currentWeekDisplay.innerHTML = `Week: <span class="clickable-week-date" data-date="${displayWeekKey}">${displayWeekKey}</span>`;
             }
           }
 
-          if (chartInfo) chartInfo.textContent = chartTitle;
-          updateWeekNavControls();
+          if (chartInfo) chartInfo.textContent = viewTitle;
+          updateWeekNavControls(); // Update button states based on current index/data
           console.log('Display updated.');
         }
 
         /** Renders the details panel in history view */
         function renderDetailsPanel(entityData, entityType) {
-          let overallPeak = 101;
-          let peakWeekDate = null;
-          if (entityData.history && entityData.history.length > 0) {
-            entityData.history.forEach((entry) => {
-              if (typeof entry.rank === 'number' && !isNaN(entry.rank)) {
-                overallPeak = Math.min(overallPeak, entry.rank);
-              }
-            });
-            const firstPeakEntry = entityData.history.find(
-              (entry) => entry.rank === overallPeak
-            );
-            if (firstPeakEntry) {
-              peakWeekDate = firstPeakEntry.week;
-            }
-          }
-          const peakDisplayValue = overallPeak <= 100 ? overallPeak : '-';
-          const firstPlayHTML = entityData.firstPlayDate
-            ? `<strong class="clickable-week-date" data-date="${formatDateKey(
-                entityData.firstPlayDate
-              )}">${formatDisplayDate(entityData.firstPlayDate)}</strong>`
-            : `<strong>N/A</strong>`;
-          const lastPlayHTML = entityData.lastPlayDate
-            ? `<strong class="clickable-week-date" data-date="${formatDateKey(
-                entityData.lastPlayDate
-              )}">${formatDisplayDate(entityData.lastPlayDate)}</strong>`
-            : `<strong>N/A</strong>`;
-          const peakWeekHTML = peakWeekDate
-            ? `<strong class="clickable-week-date" data-date="${formatDateKey(
-                peakWeekDate
-              )}">${formatDisplayDate(peakWeekDate)}</strong>`
-            : `<strong>N/A</strong>`;
-          detailsInfoContainer.innerHTML = ` <span>Total Plays: <strong>${entityData.totalPlays}</strong></span> <span>First Play: ${firstPlayHTML}</span> <span>Last Play: ${lastPlayHTML}</span> <span>All-Time Peak: <strong>${peakDisplayValue}</strong></span> <span>Peak Week: ${peakWeekHTML}</span> `;
+          const overallPeak =
+            entityData.history?.reduce(
+              (min, entry) =>
+                Math.min(
+                  min,
+                  entry.peakPosition ?? CONSTANTS.DEFAULT_PEAK_VALUE
+                ),
+              CONSTANTS.DEFAULT_PEAK_VALUE
+            ) ?? CONSTANTS.DEFAULT_PEAK_VALUE; // Overall best peak from enriched history
 
-          // Artist Card / Top Songs
+          const peakEntry = entityData.history?.find(
+            (entry) => entry.rank === overallPeak
+          );
+          const peakWeekDate = peakEntry?.week;
+
+          const peakDisplayValue =
+            overallPeak <= CONSTANTS.MAX_LIST_ITEMS ? overallPeak : '-';
+          const createClickableDateHTML = (date) =>
+            date
+              ? `<strong class="clickable-week-date" data-date="${formatDateKey(
+                  date
+                )}">${formatDisplayDate(date)}</strong>`
+              : `<strong>N/A</strong>`;
+
+          detailsInfoContainer.innerHTML = `
+            <span>Total Plays: <strong>${
+              entityData.totalPlays || 0
+            }</strong></span>
+            <span>First Play: ${createClickableDateHTML(
+              entityData.firstPlayDate
+            )}</span>
+            <span>Last Play: ${createClickableDateHTML(
+              entityData.lastPlayDate
+            )}</span>
+            <span>All-Time Peak: <strong>${peakDisplayValue}</strong></span>
+            <span>Peak Week: ${createClickableDateHTML(peakWeekDate)}</span>
+        `;
+
+          // Artist Card / Top Songs Section
           artistCardContainer.style.display = 'none';
           artistTopSongsContainer.style.display = 'none';
-          if (entityType === 'track' && entityData.artistName) {
-            // Use the stored artistKey (MBID or name) for linking
-            const artistKey = entityData.artistKey || entityData.artistName;
-            const artistData = processedData.artists.get(artistKey);
+          artistCardContainer.removeAttribute('data-artist-key'); // Clear previous key
+
+          if (entityType === 'track' && entityData.artistKey) {
+            // Show artist card for tracks
+            const artistData = processedData.artists.get(entityData.artistKey);
             if (artistData) {
-              const artistFirstPlayHTML = artistData.firstPlayDate
-                ? `<strong class="clickable-week-date" data-date="${formatDateKey(
-                    artistData.firstPlayDate
-                  )}">${formatDisplayDate(artistData.firstPlayDate)}</strong>`
-                : `<strong>N/A</strong>`;
-              const artistLastPlayHTML = artistData.lastPlayDate
-                ? `<strong class="clickable-week-date" data-date="${formatDateKey(
-                    artistData.lastPlayDate
-                  )}">${formatDisplayDate(artistData.lastPlayDate)}</strong>`
-                : `<strong>N/A</strong>`;
-              artistCardContainer.innerHTML = ` Artist: <strong>${entityData.artistName}</strong> <span>First Play: ${artistFirstPlayHTML}</span> <span>Last Play: ${artistLastPlayHTML}</span> <span class="text-xs text-blue-600 hover:underline">(View Artist History)</span> `;
-              artistCardContainer.dataset.artistKey = artistKey; // Store the key (MBID or name)
+              artistCardContainer.innerHTML = `
+                    Artist: <strong>${
+                      artistData.artistName || entityData.artistKey
+                    }</strong>
+                    <span>First Play: ${createClickableDateHTML(
+                      artistData.firstPlayDate
+                    )}</span>
+                    <span>Last Play: ${createClickableDateHTML(
+                      artistData.lastPlayDate
+                    )}</span>
+                    <span class="text-xs text-blue-600 hover:underline">(View Artist History)</span>
+                `;
+              artistCardContainer.dataset.artistKey = entityData.artistKey; // Store key for click handler
               artistCardContainer.style.display = 'block';
             }
           } else if (entityType === 'artist') {
-            displayArtistTopSongs(selectedHistoryEntity.key); // Use the key directly
+            // Show top songs list for artists
+            displayArtistTopSongs(selectedHistoryEntity.key); // Pass the artist key
           }
         }
 
-        /** Renders the history chart */
+        /** Renders the history line chart */
         function renderHistoryChart(displayName, history) {
           if (!chartCanvas) return;
-          if (mainChartInstance) mainChartInstance.destroy(); // Destroy previous chart
-          if (typeof Chart === 'undefined') {
-            updateStatus('Error: Charting library failed.', true);
-            return;
-          }
+          // No need to destroy here, updateChartOrList handles it before calling render functions
+          // if (mainChartInstance) mainChartInstance.destroy();
 
           const { labels, datasets } = prepareHistoryChartData(
             displayName,
@@ -2368,62 +2594,61 @@
           const config = {
             type: 'line',
             data: { labels, datasets },
-            options: getLineChartOptions('Rank', 'Week Starting', true),
+            options: getLineChartOptions('Rank', 'Week Starting', true), // Enable clicks
           };
+
           try {
             mainChartInstance = new Chart(chartCanvas, config);
           } catch (e) {
             console.error('Error creating history chart:', e);
-            updateStatus('Error creating chart.', true);
+            updateStatus('Error displaying chart. Check console.', true);
           }
         }
 
-        // --- Other functions ---
+        /** Prepares data specifically for the history line chart */
         function prepareHistoryChartData(entityName, historyArray) {
+          // Use allWeeks as the definitive X-axis labels
           const labels = processedData.allWeeks.map(formatDateKey);
-          const historyPoints = new Map(
+          // Create a map for quick lookup of rank by week key
+          const historyRankMap = new Map(
             historyArray.map((h) => [formatDateKey(h.week), h.rank])
           );
-          const chartDataPoints = labels.map((label) =>
-            label ? historyPoints.get(label) ?? null : null
+
+          // Map labels to ranks, inserting null for weeks the entity wasn't charted
+          const chartDataPoints = labels.map(
+            (label) => historyRankMap.get(label) ?? null
           );
+
           const datasets = [
             {
               label: `${entityName} Rank`,
               data: chartDataPoints,
-              borderColor: '#4f46e5',
-              backgroundColor: '#c7d2fe',
-              tension: 0.1,
-              fill: false,
-              spanGaps: false,
-              pointRadius: 3,
-              pointHoverRadius: 5,
+              borderColor: CONSTANTS.CHART_BORDER_COLOR,
+              backgroundColor: CONSTANTS.CHART_BACKGROUND_COLOR,
+              tension: CONSTANTS.CHART_TENSION,
+              fill: false, // Don't fill area under line
+              spanGaps: false, // Don't connect points with nulls between them
+              pointRadius: CONSTANTS.CHART_POINT_RADIUS,
+              pointHoverRadius: CONSTANTS.CHART_POINT_HOVER_RADIUS,
             },
           ];
+
           return { labels, datasets };
         }
+
+        /** Prepares the data array for rendering the Top 100 list for a specific week */
         function prepareTop100ListData(entityType, dataMap, weekKey) {
           const listData = [];
-          const weekDate = dateFns.parseISO(weekKey);
-          const prevWeekDate = dateFns.subWeeks(weekDate, 1); // Get previous week's date
-          const prevWeekKey = formatDateKey(prevWeekDate); // Get previous week's key
+          const weekDate = dateFns.parseISO(weekKey); // Date object for the target week
 
           dataMap.forEach((data, key) => {
-            const rankEntry = data.history.find(
+            // Find the specific history entry for the target week
+            const rankEntry = data.history?.find(
               (h) => formatDateKey(h.week) === weekKey
             );
-            if (rankEntry) {
-              // Find previous week's rank directly from the full history
-              const prevRankEntry = data.history.find(
-                (h) => formatDateKey(h.week) === prevWeekKey
-              );
-              const lastWeekRank = prevRankEntry ? prevRankEntry.rank : null;
 
-              const weeksOnChart =
-                rankEntry.weeksOnChart ||
-                data.history.filter(
-                  (h) => dateFns.compareAsc(h.week, weekDate) <= 0
-                ).length;
+            if (rankEntry) {
+              // Get necessary details directly from the enriched rankEntry
               listData.push({
                 key: key,
                 name:
@@ -2433,189 +2658,215 @@
                 albumMbid: entityType === 'track' ? data.albumMbid : null,
                 rank: rankEntry.rank,
                 plays: rankEntry.playsInWindow,
-                status: rankEntry.status,
-                peak: rankEntry.peakPosition,
-                peakStatus: rankEntry.peakStatus,
-                weeksOnChart: weeksOnChart,
+                status: rankEntry.status, // NEW, RE-ENTRY, or rank diff number
+                peak: rankEntry.peakPosition, // Peak achieved *up to* this week
+                peakStatus: rankEntry.peakStatus, // PEAK, RE-PEAK, or null
+                weeksOnChart: rankEntry.weeksOnChart,
                 playPercentChange: rankEntry.playPercentChange,
-                lastWeekRank: lastWeekRank, // Add last week's rank
+                lastWeekRank: rankEntry.lastWeekRank, // Rank from the previous week
               });
             }
           });
+
+          // Sort the collected data by rank for this week
           listData.sort((a, b) => a.rank - b.rank);
           return listData;
         }
 
+        /** Renders the header row for the Top 100 list (desktop view) */
         function renderListHeader() {
           if (!listHeaderContainer) return;
-          // Desktop header (hidden on mobile by default via CSS)
+          // This header is hidden on small screens by CSS rules
           listHeaderContainer.innerHTML = `
-                     <div class="list-header">
-                         <div>Rank</div>
-                         <div></div> <div>Title</div>
-                         <div>Peak</div>
-                         <div>Change</div>
-                         <div>Weeks</div>
-                     </div>
-                 `;
+            <div class="list-header">
+                <div>Rank</div>
+                <div></div> <div>Title</div>
+                <div>Peak</div>
+                <div>Change</div>
+                <div>Weeks</div>
+            </div>
+        `;
+          listHeaderContainer.style.display = 'block'; // Ensure visible if data loaded
         }
 
+        /** Renders the Top 100 list items into the specified container */
         function renderTop100List(listData, container) {
-          container.innerHTML = '';
-          if (listData.length === 0) {
-            container.textContent = 'No ranking data available for this week.';
+          if (!container) return;
+          container.innerHTML = ''; // Clear previous list
+
+          if (!listData || listData.length === 0) {
+            container.innerHTML =
+              '<p class="text-center text-gray-500 p-4">No ranking data available for this week.</p>';
             return;
           }
+
           listData.forEach((item) => {
-            const li = document.createElement('div');
-            li.className = 'chart-row'; // Base class for grid structure
-            if (item.key !== '-') {
-              li.dataset.key = item.key;
+            const rowElement = document.createElement('div');
+            rowElement.className = 'chart-row'; // Base class for grid structure
+            if (item.key && item.key !== '-') {
+              rowElement.dataset.key = item.key; // Make row clickable if it has a valid key
+              rowElement.style.cursor = 'pointer';
             } else {
-              li.style.cursor = 'default';
+              rowElement.style.cursor = 'default'; // Not clickable
             }
 
-            // --- Status Icon/Text ---
-            let statusIndicator = '';
-            let statusClass = '';
-            if (item.status === 'NEW') {
-              statusIndicator = '★';
-              statusClass = 'list-change-new';
-            } else if (item.status === 'RE-ENTRY') {
-              statusIndicator = 'RE';
-              statusClass = 'list-change-re';
-            } // Changed to RE
-            else if (typeof item.status === 'number') {
-              if (item.status > 0) {
-                statusIndicator = `<span>▲</span> ${item.status}`;
-                statusClass = 'list-change-up';
-              } else if (item.status < 0) {
-                statusIndicator = `<span>▼</span> ${Math.abs(item.status)}`;
-                statusClass = 'list-change-down';
-              } else {
-                statusIndicator = '=';
-                statusClass = 'list-change-same';
-              }
-            } else {
-              statusIndicator = '-';
-              statusClass = 'list-change-same';
-            }
+            const { statusIndicator, statusClass } = getStatusIndicatorHTML(
+              item.status
+            );
+            const peakIndicatorHTML = getPeakIndicatorHTML(item.peakStatus); // Gets mobile and desktop versions
+            const imageHTML = getImageHTML(item, entityTypeSelect.value); // Pass entity type
 
-            // --- Peak Indicator --- (Generate HTML once, conditionally add classes)
-            let peakIndicatorText = '';
-            if (item.peakStatus === 'PEAK') peakIndicatorText = '▲ Peak';
-            else if (item.peakStatus === 'RE-PEAK')
-              peakIndicatorText = '▲ Re-Peak'; // Corrected text
+            const peakDisplay = item.peak ?? '-';
+            const weeksDisplay = item.weeksOnChart ?? '-';
+            const lastWeekDisplay = item.lastWeekRank ?? '-'; // Rank from previous week
 
-            // Generate HTML for both mobile and desktop, using Tailwind visibility classes
-            const desktopPeakIndicatorHTML = peakIndicatorText
-              ? `<span class="peak-indicator hidden sm:inline-flex">${peakIndicatorText}</span>`
-              : '';
-            const mobilePeakIndicatorHTML = peakIndicatorText
-              ? `<span class="peak-indicator peak-indicator-mobile sm:hidden">${peakIndicatorText}</span>`
-              : '';
+            // Assemble row HTML using template literals and helper functions
+            rowElement.innerHTML = `
+            ${imageHTML}
 
-            const peakDisplay =
-              typeof item.peak === 'number' && item.peak <= 100
-                ? item.peak
-                : '-';
-            const weeksDisplay = item.weeksOnChart || '-';
-            const lastWeekDisplay = item.lastWeekRank ? item.lastWeekRank : '-';
+            <div class="list-rank-change-col sm:hidden">
+                <div class="list-rank">${item.rank}</div>
+                <div class="list-change ${statusClass}">${statusIndicator}</div>
+            </div>
 
-            // --- Image Placeholder / Cover Art ---
-            let imageHTML = '';
-            let initials = '?';
-            if (item.name !== '-') {
-              initials = item.name.charAt(0).toUpperCase();
-              if (item.artistName && entityTypeSelect.value === 'track') {
-                initials += item.artistName.charAt(0).toUpperCase();
-              } else if (
-                entityTypeSelect.value === 'artist' &&
-                item.name.length > 1
-              ) {
-                initials = item.name.substring(0, 2).toUpperCase();
-              }
-            }
-            const safeInitials = initials.replace(/['"\\]/g, '\\$&'); // Escape for JS string
-            const onErrorLogic =
-              `this.onerror=null; const parentContainer = this.parentNode; if(parentContainer && parentContainer.classList.contains('list-image-container')){ const ph = document.createElement('div'); ph.className='list-image-placeholder'; ph.textContent='${safeInitials}'; parentContainer.innerHTML=''; parentContainer.appendChild(ph); } else { console.error('Could not find image container for fallback.'); this.remove(); }`.replace(
-                /\n\s*/g,
-                ' '
-              );
-            if (item.albumMbid && entityTypeSelect.value === 'track') {
-              imageHTML = ` <div class="list-image-container"> <img src="https://coverartarchive.org/release/${item.albumMbid}/front-250" alt="Cover Art" loading="lazy" onerror="${onErrorLogic}"> </div>`;
-            } else {
-              imageHTML = `<div class="list-image-container"><div class="list-image-placeholder">${initials}</div></div>`;
-            }
+            <div class="list-rank hidden sm:block">${item.rank}</div>
 
-            // --- Construct innerHTML with conditional classes for mobile/desktop ---
-            li.innerHTML = `
-                        ${imageHTML}
+            <div class="list-details-stats-col">
+                <div class="list-details">
+                    <span class="list-name">${item.name}</span>
+                    ${
+                      item.artistName
+                        ? `<span class="list-artist">${item.artistName}</span>`
+                        : ''
+                    }
+                    <span class="list-plays hidden sm:inline">
+                       Plays: ${item.plays} ${peakIndicatorHTML.desktop}
+                    </span>
+                </div>
+                <div class="list-secondary-stats sm:hidden">
+                    <span>${lastWeekDisplay}<span class="stat-label">LW</span></span>
+                    <span>${peakDisplay}<span class="stat-label">PK</span></span>
+                    <span>${weeksDisplay}<span class="stat-label">WOC</span></span>
+                </div>
+            </div>
 
-                        <div class="list-rank-change-col sm:hidden">
-                            <div class="list-rank">${item.rank}</div>
-                            <div class="list-change ${statusClass}">${statusIndicator}</div>
-                        </div>
-                        <div class="list-rank hidden sm:block">${
-                          item.rank
-                        }</div> <div class="list-details-stats-col">
-                            <div class="list-details">
-                                <span class="list-name">${item.name}</span>
-                                ${
-                                  item.artistName
-                                    ? `<span class="list-artist">${item.artistName}</span>`
-                                    : ''
-                                }
-                                <span class="list-plays hidden sm:inline">Plays: ${
-                                  item.plays
-                                } ${desktopPeakIndicatorHTML}</span>
-                            </div>
-                            <div class="list-secondary-stats sm:hidden">
-                                <span>${lastWeekDisplay}<span class="stat-label">LW</span></span>
-                                <span>${peakDisplay}<span class="stat-label">PK</span></span>
-                                <span>${weeksDisplay}<span class="stat-label">WOC</span></span>
-                            </div>
-                        </div>
+            <div class="list-peak-info hidden sm:block">
+                ${peakDisplay}
+                <span>Peak</span>
+            </div>
 
-                        <div class="list-peak-info hidden sm:block">
-                            ${peakDisplay}
-                            <span>Peak</span>
-                        </div>
+            <div class="list-change ${statusClass} hidden sm:block">
+                ${statusIndicator}
+            </div>
 
-                        <div class="list-change ${statusClass} hidden sm:block">
-                            ${statusIndicator}
-                        </div>
+            <div class="list-weeks hidden sm:block">${weeksDisplay}</div>
 
-                        <div class="list-weeks hidden sm:block">${weeksDisplay}</div>
-
-                        ${mobilePeakIndicatorHTML}
-                    `;
-            container.appendChild(li);
+            ${peakIndicatorHTML.mobile}
+        `;
+            container.appendChild(rowElement);
           });
         }
 
+        // --- List Rendering Helpers ---
+
+        /** Generates HTML for status indicator (NEW, RE, ▲, ▼, =) */
+        function getStatusIndicatorHTML(statusValue) {
+          let statusIndicator = '-';
+          let statusClass = 'list-change-same';
+
+          if (statusValue === 'NEW') {
+            statusIndicator = '★'; // New Entry Star
+            statusClass = 'list-change-new';
+          } else if (statusValue === 'RE-ENTRY') {
+            statusIndicator = 'RE'; // Re-Entry
+            statusClass = 'list-change-re';
+          } else if (typeof statusValue === 'number') {
+            if (statusValue > 0) {
+              statusIndicator = `<span>▲</span> ${statusValue}`; // Up
+              statusClass = 'list-change-up';
+            } else if (statusValue < 0) {
+              statusIndicator = `<span>▼</span> ${Math.abs(statusValue)}`; // Down
+              statusClass = 'list-change-down';
+            } else {
+              // statusValue === 0
+              statusIndicator = '='; // Same
+              statusClass = 'list-change-same';
+            }
+          }
+          return { statusIndicator, statusClass };
+        }
+
+        /** Generates HTML for peak status indicators (mobile and desktop) */
+        function getPeakIndicatorHTML(peakStatus) {
+          let peakIndicatorText = '';
+          if (peakStatus === 'PEAK') peakIndicatorText = '▲ Peak';
+          else if (peakStatus === 'RE-PEAK') peakIndicatorText = '▲ Re-Peak';
+
+          const desktopHTML = peakIndicatorText
+            ? `<span class="peak-indicator hidden sm:inline-flex">${peakIndicatorText}</span>`
+            : '';
+          const mobileHTML = peakIndicatorText
+            ? `<span class="peak-indicator peak-indicator-mobile sm:hidden">${peakIndicatorText}</span>`
+            : '';
+
+          return { desktop: desktopHTML, mobile: mobileHTML };
+        }
+
+        /** Generates image HTML (cover art or placeholder) */
+        function getImageHTML(item, entityType) {
+          let initials = '?';
+          if (item.name && item.name !== '-') {
+            initials = item.name.charAt(0).toUpperCase();
+            if (entityType === 'track' && item.artistName) {
+              initials += item.artistName.charAt(0).toUpperCase();
+            } else if (entityType === 'artist' && item.name.length > 1) {
+              initials = item.name.substring(0, 2).toUpperCase();
+            }
+          }
+          // Sanitize initials for use in JS string literal within onerror
+          const safeInitials = initials
+            .replace(/['"\\]/g, '\\$&')
+            .replace(/\n/g, '');
+
+          // Define the onerror fallback logic compactly
+          const onErrorLogic = `this.onerror=null;const p=this.parentElement;if(p&&p.classList.contains('list-image-container')){const ph=document.createElement('div');ph.className='list-image-placeholder';ph.textContent='${safeInitials}';p.innerHTML='';p.appendChild(ph)}else{this.remove()}`;
+
+          // Attempt to use Cover Art Archive if it's a track with an album MBID
+          if (entityType === 'track' && item.albumMbid) {
+            return `
+                <div class="list-image-container">
+                    <img src="https://coverartarchive.org/release/${item.albumMbid}/front-250"
+                         alt="Cover Art for ${item.name}"
+                         loading="lazy"
+                         onerror="${onErrorLogic}">
+                </div>`;
+          } else {
+            // Fallback to placeholder
+            return `
+                <div class="list-image-container">
+                    <div class="list-image-placeholder">${initials}</div>
+                </div>`;
+          }
+        }
+
+        /** Generates Chart.js options object */
         function getLineChartOptions(yLabel, xLabel, enableClicks = false) {
           const options = {
             responsive: true,
             maintainAspectRatio: false,
             scales: {
               y: {
-                reverse: true,
+                reverse: true, // Rank 1 at the top
                 title: { display: true, text: yLabel },
-                ticks: {
-                  precision: 0,
-                  max: 100,
-                  min: 1,
-                  suggestedMin: 1,
-                  suggestedMax: 100,
-                },
-                beginAtZero: false,
+                min: 1,
+                max: CONSTANTS.MAX_LIST_ITEMS, // Ensure scale goes up to 100
+                ticks: { precision: 0 },
               },
               x: {
                 title: { display: true, text: xLabel },
                 ticks: {
                   autoSkip: true,
-                  maxTicksLimit: 15,
+                  maxTicksLimit: 15, // Limit number of date labels shown
                   maxRotation: 70,
                   minRotation: 0,
                 },
@@ -2625,6 +2876,7 @@
               legend: { display: true },
               tooltip: {
                 callbacks: {
+                  // Show rank or "Not Ranked" in tooltip
                   label: (ctx) =>
                     ctx.parsed.y !== null
                       ? `Rank: ${ctx.parsed.y}`
@@ -2632,8 +2884,13 @@
                 },
               },
             },
-            interaction: { mode: 'index', intersect: false },
+            interaction: {
+              mode: 'index', // Show tooltips for all datasets at that index
+              intersect: false, // Tooltip triggers even if not exactly hovering point
+            },
           };
+
+          // Add onClick handler if enabled (for history chart -> list view)
           if (enableClicks) {
             options.onClick = (event, elements) => {
               if (elements.length > 0) {
@@ -2647,286 +2904,128 @@
                     'Chart week clicked:',
                     formatDateKey(clickedWeekDate)
                   );
-                  currentWeekIndex = clickedIndex;
-                  selectedHistoryEntity = { key: null, type: null };
-                  searchInput.value = '';
-                  updateChartOrList();
+                  jumpToWeek(clickedWeekDate); // Use jumpToWeek to handle navigation
                 }
               }
             };
           }
           return options;
         }
-        function updateWeekNavControls() {
-          if (!prevWeekBtn || !nextWeekBtn) return;
-          const maxIndex = processedData.allWeeks.length - 1;
-          const displayWeekIndex =
-            currentWeekIndex === -1 ? maxIndex : currentWeekIndex;
-          prevWeekBtn.disabled = displayWeekIndex <= 0;
-          nextWeekBtn.disabled = displayWeekIndex >= maxIndex;
-        }
-        function setDateInputRange() {
-          if (
-            !weekJumpInput ||
-            !processedData.allWeeks ||
-            processedData.allWeeks.length === 0
-          )
-            return;
-          try {
-            checkDateFns();
-            weekJumpInput.min = formatDateKey(processedData.allWeeks[0]);
-            weekJumpInput.max = formatDateKey(
-              processedData.allWeeks[processedData.allWeeks.length - 1]
-            );
-          } catch (e) {
-            console.error('Error setting date input range:', e);
-          }
-        }
 
-        /** Displays top 10 songs for an artist, using artistKey for matching */
+        /** Displays top N songs for an artist in the history view */
         function displayArtistTopSongs(viewedArtistKey) {
           if (!artistTopSongsContainer) return;
-          artistTopSongsContainer.innerHTML = '';
-          artistTopSongsContainer.style.display = 'none';
+          artistTopSongsContainer.innerHTML = ''; // Clear previous
+          artistTopSongsContainer.style.display = 'none'; // Hide initially
 
           const viewedArtistData = processedData.artists.get(viewedArtistKey);
           const displayArtistName =
-            viewedArtistData?.artistName || viewedArtistKey; // Use name for display
+            viewedArtistData?.artistName || viewedArtistKey;
 
           const artistTracks = [];
           processedData.tracks.forEach((trackData, trackKey) => {
             // Match using the stored artistKey on the track data
             if (trackData.artistKey === viewedArtistKey) {
-              let trackPeak = 101;
-              let trackPeakWeek = null;
-              if (trackData.history && trackData.history.length > 0) {
-                trackData.history.forEach((h) => {
-                  if (typeof h.rank === 'number' && !isNaN(h.rank)) {
-                    trackPeak = Math.min(trackPeak, h.rank);
-                  }
-                });
-                const firstPeakEntry = trackData.history.find(
-                  (h) => h.rank === trackPeak
-                );
-                if (firstPeakEntry) {
-                  trackPeakWeek = firstPeakEntry.week;
-                }
-              }
+              const overallPeak =
+                trackData.history?.reduce(
+                  (min, entry) =>
+                    Math.min(
+                      min,
+                      entry.peakPosition ?? CONSTANTS.DEFAULT_PEAK_VALUE
+                    ),
+                  CONSTANTS.DEFAULT_PEAK_VALUE
+                ) ?? CONSTANTS.DEFAULT_PEAK_VALUE;
+              const peakEntry = trackData.history?.find(
+                (entry) => entry.rank === overallPeak
+              );
+              const peakWeekDate = peakEntry?.week;
+
               artistTracks.push({
-                key: trackKey, // Track's unique key
-                name: trackData.trackName,
-                totalPlays: trackData.totalPlays,
-                peak: trackPeak <= 100 ? trackPeak : null,
-                peakWeek: trackPeakWeek,
+                key: trackKey,
+                name: trackData.trackName || 'Unknown Track',
+                totalPlays: trackData.totalPlays || 0,
+                peak:
+                  overallPeak <= CONSTANTS.MAX_LIST_ITEMS ? overallPeak : null,
+                peakWeek: peakWeekDate,
               });
             }
           });
 
-          if (artistTracks.length === 0) return;
+          if (artistTracks.length === 0) return; // No tracks found for this artist
 
+          // Sort artist's tracks: primarily by peak position (lower is better), then by total plays (higher is better)
           artistTracks.sort((a, b) => {
-            const peakA = a.peak === null ? 101 : a.peak;
-            const peakB = b.peak === null ? 101 : b.peak;
+            const peakA =
+              a.peak === null ? CONSTANTS.DEFAULT_PEAK_VALUE : a.peak;
+            const peakB =
+              b.peak === null ? CONSTANTS.DEFAULT_PEAK_VALUE : b.peak;
             if (peakA !== peakB) {
-              return peakA - peakB;
+              return peakA - peakB; // Sort by peak ascending
             }
-            return b.totalPlays - a.totalPlays;
+            return b.totalPlays - a.totalPlays; // Sort by plays descending as tie-breaker
           });
 
-          const top10Tracks = artistTracks.slice(0, 10);
-          let listHTML = `<h4>Top ${top10Tracks.length} Tracks for ${displayArtistName} (Sorted by Peak, then Plays):</h4>`;
-          top10Tracks.forEach((track, index) => {
+          const topNTracks = artistTracks.slice(0, 10); // Display top 10
+
+          let listHTML = `<h4>Top ${topNTracks.length} Tracks for ${displayArtistName} (by Peak, then Plays):</h4>`;
+          topNTracks.forEach((track, index) => {
             const peakDisplay = track.peak !== null ? track.peak : '-';
             const peakWeekDateKey = formatDateKey(track.peakWeek);
+            // Make peak week date clickable
             const peakWeekDisplayHTML = peakWeekDateKey
               ? `<span class="clickable-week-date" data-date="${peakWeekDateKey}">${formatDisplayDate(
                   track.peakWeek
                 )}</span>`
-              : formatDisplayDate(track.peakWeek);
+              : formatDisplayDate(track.peakWeek); // Handles N/A case
+
             listHTML += `
-                        <div class="artist-song-item">
-                            <div class="artist-song-rank">${index + 1}.</div>
-                            <div>
-                                <span class="artist-song-name" data-track-key="${
-                                  track.key
-                                }">${track.name}</span>
-                                <div class="artist-song-plays">(${
-                                  track.totalPlays
-                                } Plays)</div>
-                            </div>
-                            <div class="artist-song-peak-info">Peak: ${peakDisplay} (${peakWeekDisplayHTML})</div>
-                        </div>
-                    `;
+                <div class="artist-song-item">
+                    <div class="artist-song-rank">${index + 1}.</div>
+                    <div>
+                        <span class="artist-song-name" data-track-key="${
+                          track.key
+                        }">${track.name}</span>
+                        <div class="artist-song-plays">(${
+                          track.totalPlays
+                        } Plays)</div>
+                    </div>
+                    <div class="artist-song-peak-info">Peak: ${peakDisplay} (${peakWeekDisplayHTML})</div>
+                </div>
+            `;
           });
+
           artistTopSongsContainer.innerHTML = listHTML;
-          artistTopSongsContainer.style.display = 'block';
+          artistTopSongsContainer.style.display = 'block'; // Show the list
         }
 
         // --- Export Image Functionality ---
-        function renderExportListHTML(listData, title, imageResults) {
-          let html = `<h3>${title}</h3>`;
-          html += ` <div class="export-grid-header"> <div>Rank</div> <div>Art</div> <div>+/-</div> <div style="text-align: left;">Song</div> <div>Points</div> <div>%</div> <div>Peak</div> <div>WoC</div> </div> `;
-          if (listData.length === 0) {
-            html +=
-              '<div style="text-align: center; padding: 10px; background-color: white; border-radius: 0 0 8px 8px;">No ranking data available for this week.</div>';
-          } else {
-            const baseColor = '#FFFFFF';
-            const positiveTargetColor = '#6EE7B7';
-            const negativeTargetColor = '#FCA5A5';
-            const newColor = '#FEF9C3';
-            listData.forEach((item, index) => {
-              let rowBgColor = baseColor;
-              const change = item.playPercentChange;
-              if (item.status === 'NEW') {
-                rowBgColor = newColor;
-              } else if (
-                typeof change === 'number' &&
-                change !== Infinity &&
-                change !== 0
-              ) {
-                const absChange = Math.abs(change);
-                const factor = Math.min(absChange / 100, 1);
-                if (change > 0) {
-                  rowBgColor = interpolateColor(
-                    baseColor,
-                    positiveTargetColor,
-                    factor
-                  );
-                } else if (change < 0) {
-                  rowBgColor = interpolateColor(
-                    baseColor,
-                    negativeTargetColor,
-                    factor
-                  );
-                }
-              }
-              let rankChangeText = '';
-              let rankChangeStyle = 'color: #6b7280;';
-              if (item.status === 'NEW') {
-                rankChangeText = 'NEW';
-                rankChangeStyle = 'color: #a855f7; font-weight: bold;';
-              } else if (item.status === 'RE-ENTRY') {
-                rankChangeText = 'RE';
-                rankChangeStyle = 'color: #a855f7; font-weight: bold;';
-              } else if (typeof item.status === 'number') {
-                if (item.status > 0) {
-                  rankChangeText = `+${item.status}`;
-                  rankChangeStyle = 'color: #10b981;';
-                } else if (item.status < 0) {
-                  rankChangeText = `${item.status}`;
-                  rankChangeStyle = 'color: #ef4444;';
-                } else {
-                  rankChangeText = '=';
-                }
-              } else {
-                rankChangeText = '-';
-              }
-              let playChangeText = '-';
-              if (item.status === 'NEW') {
-                playChangeText = 'NEW';
-              } else if (typeof item.playPercentChange === 'number') {
-                const pc = item.playPercentChange;
-                if (pc === Infinity) {
-                  playChangeText = '++%';
-                } else if (pc > 0) {
-                  playChangeText = `+${pc.toFixed(0)}%`;
-                } else if (pc < 0) {
-                  playChangeText = `${pc.toFixed(0)}%`;
-                } else {
-                  playChangeText = '=';
-                }
-              }
-              const peakDisplay =
-                typeof item.peak === 'number' && item.peak <= 100
-                  ? item.peak
-                  : '-';
-              const weeksDisplay = item.weeksOnChart || '-';
-              const pointsDisplay = item.plays || '-';
-              let imageCellHTML = '';
-              const imgResult = imageResults.get(item.key);
-              if (imgResult && imgResult.success) {
-                imageCellHTML = `<div class="list-image-container"><img src="${imgResult.element.src}" alt="Cover Art"></div>`;
-              } else {
-                let initials = '?';
-                if (item.name !== '-') {
-                  initials = item.name.charAt(0).toUpperCase();
-                  if (item.artistName && entityTypeSelect.value === 'track') {
-                    initials += item.artistName.charAt(0).toUpperCase();
-                  } else if (
-                    entityTypeSelect.value === 'artist' &&
-                    item.name.length > 1
-                  ) {
-                    initials = item.name.substring(0, 2).toUpperCase();
-                  }
-                }
-                imageCellHTML = `<div class="list-image-container"><div class="list-image-placeholder">${initials}</div></div>`;
-              }
-              const isLastRow = index === listData.length - 1;
-              const rowStyle = `background-color: ${rowBgColor}; ${
-                isLastRow ? 'border-radius: 0 0 8px 8px;' : ''
-              }`;
-              html += ` <div class="export-grid-row" style="${rowStyle}"> <div class="list-rank">${
-                item.rank
-              }</div> <div>${imageCellHTML}</div> <div class="list-change" style="${rankChangeStyle}">${rankChangeText}</div> <div> <span class="list-name">${
-                item.name
-              }</span> ${
-                item.artistName
-                  ? `<span class="list-artist">${item.artistName}</span>`
-                  : ''
-              } </div> <div>${pointsDisplay}</div> <div>${playChangeText}</div> <div>${peakDisplay}</div> <div>${weeksDisplay}</div> </div> `;
-            });
-          }
-          return html;
-        }
-        async function preloadImages(listData) {
-          const promises = [];
-          const imageMap = new Map();
-          listData.forEach((item) => {
-            if (item.albumMbid && entityTypeSelect.value === 'track') {
-              const promise = new Promise((resolve) => {
-                const img = new Image();
-                img.crossOrigin = 'anonymous';
-                img.onload = () =>
-                  resolve({ key: item.key, success: true, element: img });
-                img.onerror = () => resolve({ key: item.key, success: false });
-                img.src = `https://coverartarchive.org/release/${item.albumMbid}/front-250`;
-              });
-              promises.push(promise);
-            } else {
-              imageMap.set(item.key, { success: false });
-            }
-          });
-          const results = await Promise.allSettled(promises);
-          results.forEach((result) => {
-            if (result.status === 'fulfilled' && result.value) {
-              imageMap.set(result.value.key, {
-                success: result.value.success,
-                element: result.value.element,
-              });
-            }
-            if (result.status === 'rejected') {
-              console.error('Image preload promise rejected:', result.reason);
-            }
-          });
-          return imageMap;
-        }
+
+        /** Initiates the export process: prepares data, preloads images, shows preview modal */
         async function handleExportImageClick() {
-          if (typeof html2canvas === 'undefined') {
-            updateStatus('Error: Image export library not loaded.', true);
-            console.error('html2canvas is not defined.');
-            return;
-          }
-          if (selectedHistoryEntity.key) {
+          if (!html2canvas) {
             updateStatus(
-              'Export is only available for the Top 100 list view.',
+              'Error: Image export library (html2canvas) not loaded.',
               true
             );
             return;
           }
+          if (selectedHistoryEntity.key) {
+            updateStatus(
+              'Export is only available from the Top 100 list view.',
+              true
+            );
+            return;
+          }
+          if (!processedData.allWeeks || processedData.allWeeks.length === 0) {
+            updateStatus('No data loaded to export.', true);
+            return;
+          }
+
           const originalButtonText = exportImageBtn.textContent;
           exportImageBtn.disabled = true;
-          exportImageBtn.textContent = 'Generating...';
-          updateStatus('Preparing export data (this may take a moment)...');
+          exportImageBtn.textContent = 'Generating Preview...';
+          updateStatus('Preparing export data and preloading images...');
+
           try {
             const currentEntityType = entityTypeSelect.value;
             const dataMap =
@@ -2939,18 +3038,21 @@
                 : currentWeekIndex;
             const displayWeekDate = processedData.allWeeks[displayWeekIndex];
             const displayWeekKey = formatDateKey(displayWeekDate);
-            if (!displayWeekKey) {
-              updateStatus('Cannot determine current week.', true);
-              throw new Error('Cannot determine current week.');
-            }
+
+            if (!displayWeekKey)
+              throw new Error('Cannot determine current week for export.');
+
             const listData = prepareTop100ListData(
               currentEntityType,
               dataMap,
               displayWeekKey
             );
-            const topNData = listData.slice(0, exportCountN);
-            let imageResults = await preloadImages(topNData);
+            const topNData = listData.slice(0, exportCountN); // Get only the top N items
+
+            // Preload images for the top N items to embed them in the canvas
+            const imageResults = await preloadImages(topNData);
             console.log('Image preload results:', imageResults);
+
             updateStatus('Generating HTML preview...');
             const exportTitle = `Top ${exportCountN} ${currentEntityType}s - Week of ${displayWeekKey}`;
             const exportContentHTML = renderExportListHTML(
@@ -2958,103 +3060,368 @@
               exportTitle,
               imageResults
             );
+
+            // Store filename for later use
             tempExportFilename = `top${exportCountN}-${currentEntityType}-chart-${displayWeekKey}.png`;
-            if (
-              previewHtmlContainer &&
-              exportPreviewModal &&
-              previewContentWrapper
-            ) {
-              // Check for wrapper
-              previewContentWrapper.innerHTML = exportContentHTML; // Add content to wrapper
-              exportPreviewModal.style.display = 'flex';
+
+            // Display the preview in the modal
+            if (previewContentWrapper && exportPreviewModal) {
+              previewContentWrapper.innerHTML = exportContentHTML;
+              exportPreviewModal.style.display = 'flex'; // Show modal
               updateStatus(
                 'Preview ready. Confirm to generate image and download.'
               );
             } else {
-              console.error('Preview modal elements not found!');
+              console.error('Export preview modal elements not found!');
               updateStatus(
                 'Error showing preview. Attempting direct download.',
                 true
               );
-              await confirmAndDownloadExport();
+              // Fallback: try to generate and download directly if modal fails
+              await generateAndDownloadCanvas(
+                exportContentHTML,
+                tempExportFilename
+              );
             }
           } catch (err) {
             console.error('Error during export preparation:', err);
             updateStatus(
-              'Error preparing export. See console for details.',
+              `Error preparing export: ${err.message}. See console.`,
               true
             );
           } finally {
+            // Restore button state only after async operations complete
             exportImageBtn.disabled = false;
             exportImageBtn.textContent = originalButtonText;
           }
         }
+
+        /** Preloads images used in the export list */
+        async function preloadImages(listData) {
+          const promises = [];
+          const imageMap = new Map(); // key -> { success: bool, element: Image | null }
+
+          listData.forEach((item) => {
+            if (item.albumMbid && entityTypeSelect.value === 'track') {
+              const promise = new Promise((resolve) => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous'; // Needed for canvas tainting rules
+                img.onload = () =>
+                  resolve({ key: item.key, success: true, element: img });
+                img.onerror = (e) => {
+                  console.warn(
+                    `Failed to load image for ${item.name} (MBID: ${item.albumMbid}):`,
+                    e
+                  );
+                  resolve({ key: item.key, success: false, element: null });
+                };
+                img.src = `https://coverartarchive.org/release/${item.albumMbid}/front-250`;
+              });
+              promises.push(promise);
+            } else {
+              // No image URL available, mark as failed immediately
+              imageMap.set(item.key, { success: false, element: null });
+            }
+          });
+
+          // Wait for all image loading attempts to settle (resolve or reject)
+          const results = await Promise.allSettled(promises);
+
+          results.forEach((result) => {
+            if (result.status === 'fulfilled' && result.value) {
+              imageMap.set(result.value.key, {
+                success: result.value.success,
+                element: result.value.element,
+              });
+            } else if (result.status === 'rejected') {
+              // Should ideally not happen with the Promise structure above, but log if it does
+              console.error(
+                'Image preload promise unexpectedly rejected:',
+                result.reason
+              );
+            }
+          });
+
+          return imageMap;
+        }
+
+        /** Closes the export preview modal */
         function closeExportModal() {
           if (exportPreviewModal) {
             exportPreviewModal.style.display = 'none';
-            if (previewContentWrapper) previewContentWrapper.innerHTML = '';
-            tempExportFilename = '';
+            if (previewContentWrapper) previewContentWrapper.innerHTML = ''; // Clear content
+            tempExportFilename = ''; // Clear stored filename
           }
-        } // Clear wrapper
+        }
+
+        /** Handles the confirmation click: generates canvas from preview and triggers download */
         async function confirmAndDownloadExport() {
-          // Now get HTML from the wrapper inside the preview container
-          const htmlToExport = previewContentWrapper?.innerHTML;
-          if (!htmlToExport || !tempExportFilename) {
-            updateStatus('Error: Export data not found in preview.', true);
+          const htmlToExport = previewContentWrapper?.innerHTML; // Get HTML from the preview
+          const filename = tempExportFilename;
+
+          if (!htmlToExport || !filename) {
+            updateStatus(
+              'Error: Export data missing. Cannot generate image.',
+              true
+            );
             closeExportModal();
             return;
           }
+
           confirmExportBtn.disabled = true;
-          confirmExportBtn.textContent = 'Generating...';
-          updateStatus('Generating image from preview...');
-          const exportContainerId = 'exportContainer';
-          let exportContainer = document.getElementById(exportContainerId);
-          if (exportContainer) exportContainer.remove();
-          exportContainer = document.createElement('div');
-          exportContainer.id = exportContainerId;
-          exportContainer.style.position = 'absolute';
-          exportContainer.style.left = '-9999px';
-          exportContainer.style.top = 'auto';
-          exportContainer.style.width = '800px';
-          exportContainer.style.background =
-            'linear-gradient(to bottom, #e0f2fe, #bfdbfe)';
-          exportContainer.style.padding = '40px';
-          exportContainer.style.display = 'flex';
-          exportContainer.style.flexDirection = 'column';
-          exportContainer.style.alignItems = 'center';
-          exportContainer.style.justifyContent = 'flex-start';
-          exportContainer.style.minHeight = '600px';
-          exportContainer.style.fontFamily = "'Inter', sans-serif";
-          exportContainer.style.fontSize = '14px';
-          // Inject the previewed HTML (from the wrapper) into the styled container
-          exportContainer.innerHTML = htmlToExport;
-          document.body.appendChild(exportContainer);
+          confirmExportBtn.textContent = 'Generating Image...';
+          updateStatus(
+            'Generating image from preview (this might take a moment)...'
+          );
+
           try {
-            await new Promise((resolve) => setTimeout(resolve, 150));
-            const canvas = await html2canvas(exportContainer, {
-              backgroundColor: '#d0e8ff',
-              useCORS: true,
-              logging: false,
-            });
-            const imageURL = canvas.toDataURL('image/png');
-            const downloadLink = document.createElement('a');
-            downloadLink.download = tempExportFilename;
-            downloadLink.href = imageURL;
-            document.body.appendChild(downloadLink);
-            downloadLink.click();
-            document.body.removeChild(downloadLink);
+            await generateAndDownloadCanvas(htmlToExport, filename);
             updateStatus('Image exported successfully.');
           } catch (err) {
-            console.error('Error exporting image:', err);
+            console.error('Error generating or downloading canvas:', err);
             updateStatus(
-              'Error generating image. See console for details.',
+              `Error exporting image: ${err.message}. See console.`,
               true
             );
           } finally {
-            if (exportContainer) exportContainer.remove();
             confirmExportBtn.disabled = false;
             confirmExportBtn.textContent = 'Generate Image & Download';
-            closeExportModal();
+            closeExportModal(); // Close modal regardless of success/failure
+          }
+        }
+
+        /** Creates an off-screen container, renders HTML to canvas, and triggers download */
+        async function generateAndDownloadCanvas(htmlContent, filename) {
+          // Create a temporary, off-screen container for rendering
+          let tempContainer = document.getElementById(
+            CONSTANTS.EXPORT_CONTAINER_ID
+          );
+          if (tempContainer) tempContainer.remove(); // Remove if exists from previous attempt
+
+          tempContainer = document.createElement('div');
+          tempContainer.id = CONSTANTS.EXPORT_CONTAINER_ID;
+          // Apply necessary styles for html2canvas to render correctly
+          Object.assign(tempContainer.style, {
+            position: 'absolute',
+            left: '-9999px', // Position off-screen
+            top: 'auto',
+            width: `${CONSTANTS.EXPORT_IMAGE_WIDTH}px`,
+            background: CONSTANTS.EXPORT_BG_GRADIENT,
+            padding: '40px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'flex-start',
+            minHeight: '1px', // Avoid potential zero-height issues
+            // Inherit fonts, etc., or set explicitly if needed
+            fontFamily: "'Inter', sans-serif",
+            fontSize: '14px', // Match CSS for consistency
+          });
+          tempContainer.innerHTML = htmlContent; // Inject the previewed HTML
+          document.body.appendChild(tempContainer);
+
+          try {
+            // Brief pause to allow browser rendering, especially for images
+            await new Promise((resolve) =>
+              setTimeout(resolve, CONSTANTS.EXPORT_PRELOAD_TIMEOUT)
+            );
+
+            const canvas = await html2canvas(tempContainer, {
+              backgroundColor: null, // Use container's background gradient
+              useCORS: true, // Important for external images (like Cover Art Archive)
+              logging: false, // Disable html2canvas console logs
+              scale: window.devicePixelRatio * 1.5, // Increase scale slightly for better resolution
+            });
+
+            // Trigger download
+            const imageURL = canvas.toDataURL('image/png');
+            const downloadLink = document.createElement('a');
+            downloadLink.download = filename;
+            downloadLink.href = imageURL;
+            document.body.appendChild(downloadLink); // Required for Firefox
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+          } finally {
+            // Clean up the temporary container
+            if (tempContainer) tempContainer.remove();
+          }
+        }
+
+        /** Renders the HTML structure for the export image content */
+        function renderExportListHTML(listData, title, imageResults) {
+          let html = `<h3>${title}</h3>`;
+          // Header Row
+          html += `
+            <div class="export-grid-header">
+                <div>Rank</div>
+                <div>Art</div>
+                <div>+/-</div>
+                <div style="text-align: left;">Song</div>
+                <div>Points</div>
+                <div>% Δ</div> <div>Peak</div>
+                <div>WoC</div>
+            </div>
+        `;
+
+          if (!listData || listData.length === 0) {
+            html +=
+              '<div style="text-align: center; padding: 10px; background-color: white; border-radius: 0 0 8px 8px;">No ranking data available.</div>';
+            return html;
+          }
+
+          // Data Rows
+          listData.forEach((item, index) => {
+            const rowBgColor = getExportRowBackgroundColor(
+              item.status,
+              item.playPercentChange
+            );
+            const { rankChangeHTML, rankChangeStyle } = getExportRankChangeHTML(
+              item.status
+            );
+            const playChangeText = getExportPlayChangeText(
+              item.status,
+              item.playPercentChange
+            );
+            const imageCellHTML = getExportImageCellHTML(
+              item,
+              imageResults.get(item.key)
+            );
+
+            const peakDisplay = item.peak ?? '-';
+            const weeksDisplay = item.weeksOnChart ?? '-';
+            const pointsDisplay = item.plays ?? '-'; // 'Plays' are used as points here
+            const isLastRow = index === listData.length - 1;
+            const rowStyle = `background-color: ${rowBgColor}; ${
+              isLastRow ? 'border-radius: 0 0 8px 8px;' : ''
+            }`;
+
+            html += `
+            <div class="export-grid-row" style="${rowStyle}">
+                <div class="list-rank">${item.rank}</div>
+                <div>${imageCellHTML}</div>
+                <div class="list-change" style="${rankChangeStyle}">${rankChangeHTML}</div>
+                <div>
+                    <span class="list-name">${item.name}</span>
+                    ${
+                      item.artistName
+                        ? `<span class="list-artist">${item.artistName}</span>`
+                        : ''
+                    }
+                </div>
+                <div>${pointsDisplay}</div>
+                <div>${playChangeText}</div>
+                <div>${peakDisplay}</div>
+                <div>${weeksDisplay}</div>
+            </div>
+        `;
+          });
+
+          return html;
+        }
+
+        // --- Export HTML Rendering Helpers ---
+
+        /** Determines background color for export row based on status/play change */
+        function getExportRowBackgroundColor(status, playPercentChange) {
+          if (status === 'NEW' || status === 'RE-ENTRY') {
+            return CONSTANTS.EXPORT_ROW_BG_NEW;
+          }
+          if (
+            typeof playPercentChange === 'number' &&
+            playPercentChange !== Infinity &&
+            playPercentChange !== 0
+          ) {
+            const absChange = Math.abs(playPercentChange);
+            // Scale factor based on % change, capped at MAX_PLAY_CHANGE_FACTOR (e.g., 1.0 for 100% change)
+            const factor = Math.min(
+              absChange / 100,
+              CONSTANTS.EXPORT_MAX_PLAY_CHANGE_FACTOR
+            );
+
+            if (playPercentChange > 0) {
+              return interpolateColor(
+                CONSTANTS.EXPORT_ROW_BG_BASE,
+                CONSTANTS.EXPORT_ROW_BG_POSITIVE,
+                factor
+              );
+            } else {
+              // playPercentChange < 0
+              return interpolateColor(
+                CONSTANTS.EXPORT_ROW_BG_BASE,
+                CONSTANTS.EXPORT_ROW_BG_NEGATIVE,
+                factor
+              );
+            }
+          }
+          return CONSTANTS.EXPORT_ROW_BG_BASE; // Default white
+        }
+
+        /** Generates HTML and style for the rank change column in export */
+        function getExportRankChangeHTML(status) {
+          let rankChangeHTML = '-';
+          let rankChangeStyle = 'color: #6b7280;'; // Default gray
+
+          if (status === 'NEW') {
+            rankChangeHTML = 'NEW';
+            rankChangeStyle = 'color: #a855f7; font-weight: bold;'; // Purple bold
+          } else if (status === 'RE-ENTRY') {
+            rankChangeHTML = 'RE';
+            rankChangeStyle = 'color: #a855f7; font-weight: bold;'; // Purple bold
+          } else if (typeof status === 'number') {
+            if (status > 0) {
+              // Rank improved (lower number)
+              rankChangeHTML = `+${status}`;
+              rankChangeStyle = 'color: #10b981;'; // Green
+            } else if (status < 0) {
+              // Rank worsened (higher number)
+              rankChangeHTML = `${status}`; // Already negative
+              rankChangeStyle = 'color: #ef4444;'; // Red
+            } else {
+              // status === 0
+              rankChangeHTML = '=';
+              rankChangeStyle = 'color: #6b7280;'; // Gray
+            }
+          }
+          return { rankChangeHTML, rankChangeStyle };
+        }
+
+        /** Generates text for the play percentage change column in export */
+        function getExportPlayChangeText(status, playPercentChange) {
+          if (status === 'NEW' || status === 'RE-ENTRY') {
+            return status; // Show NEW or RE instead of percentage
+          }
+          if (typeof playPercentChange === 'number') {
+            if (playPercentChange === Infinity) return '++%'; // Large increase from 0
+            if (playPercentChange === 0) return '=';
+            // Format with sign and percentage symbol
+            return `${
+              playPercentChange > 0 ? '+' : ''
+            }${playPercentChange.toFixed(0)}%`;
+          }
+          return '-'; // Default if no change data
+        }
+
+        /** Generates HTML for the image cell in the export list */
+        function getExportImageCellHTML(item, imgResult) {
+          if (imgResult && imgResult.success && imgResult.element) {
+            // Use the preloaded image element's src
+            return `<div class="list-image-container"><img src="${imgResult.element.src}" alt="Cover Art"></div>`;
+          } else {
+            // Fallback to placeholder if preload failed or no image available
+            let initials = '?';
+            if (item.name && item.name !== '-') {
+              initials = item.name.charAt(0).toUpperCase();
+              if (item.artistName && entityTypeSelect.value === 'track') {
+                // Check type again for context
+                initials += item.artistName.charAt(0).toUpperCase();
+              } else if (
+                entityTypeSelect.value === 'artist' &&
+                item.name.length > 1
+              ) {
+                initials = item.name.substring(0, 2).toUpperCase();
+              }
+            }
+            return `<div class="list-image-container"><div class="list-image-placeholder">${initials}</div></div>`;
           }
         }
       }); // End of DOMContentLoaded listener
