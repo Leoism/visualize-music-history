@@ -98,6 +98,12 @@
         sm: flex-grow: 0;
       }
 
+      .setting-item input[type=number]:disabled {
+        background-color: #f3f4f6;
+        cursor: not-allowed;
+      }
+
+      /* Style disabled input */
       .settings-actions {
         margin-top: 1.5rem;
         text-align: right;
@@ -306,7 +312,8 @@
           grid-template-columns: 3rem 48px 1fr 4rem 3rem 3.5rem;
           /* Desktop columns */
           gap: 0.75rem;
-          padding: 0.5rem 1rem;
+          padding: 0;
+          /* Remove padding from header row */
           border-bottom: 2px solid #e5e7eb;
           font-size: 0.75rem;
           font-weight: 600;
@@ -320,6 +327,8 @@
 
         .list-header>div {
           text-align: center;
+          padding: 0.5rem 1rem;
+          /* Add padding to header cells */
         }
 
         .list-header>div:nth-child(3) {
@@ -338,12 +347,18 @@
         /* Gap between main columns */
         align-items: center;
         /* Align items vertically */
-        padding: 0.75rem 0.5rem;
-        /* Adjust padding */
+        padding: 0;
+        /* Remove padding from row */
         border-bottom: 1px solid #f3f4f6;
         cursor: pointer;
         transition: background-color 0.2s ease;
         min-height: 60px;
+      }
+
+      /* Apply padding to cells within the row */
+      .chart-row>div {
+        padding: 0.75rem 0.5rem;
+        /* Default mobile padding */
       }
 
       /* Desktop layout */
@@ -352,7 +367,11 @@
           /* sm: Rank, Art, Title, Peak, Change, Weeks */
           grid-template-columns: 3rem 48px 1fr 4rem 3rem 3.5rem;
           gap: 0.75rem;
+        }
+
+        .chart-row>div {
           padding: 0.75rem 1rem;
+          /* Desktop padding */
         }
       }
 
@@ -374,6 +393,8 @@
         border-radius: 0.25rem;
         overflow: hidden;
         background-color: #e5e7eb;
+        padding: 0 !important;
+        /* Override cell padding */
       }
 
       .list-image-placeholder {
@@ -791,7 +812,7 @@
         width: 100%;
         max-width: 720px;
         margin: 0 auto;
-        padding: 6px 5px;
+        padding: 0;
       }
 
       .export-grid-header {
@@ -810,15 +831,18 @@
         background-color: white;
       }
 
+      .export-grid-header>div,
+      .export-grid-row>div {
+        text-align: center;
+        padding: 6px 5px;
+        vertical-align: middle;
+      }
+
+      /* Add padding to cells */
       #exportContainer .export-grid-row:last-child,
       #previewHtmlContainer .export-grid-row:last-child {
         border-bottom: none;
         border-radius: 0 0 8px 8px;
-      }
-
-      .export-grid-header>div,
-      .export-grid-row>div {
-        text-align: center;
       }
 
       .export-grid-header>div:nth-child(4),
@@ -861,8 +885,10 @@
         display: flex;
         align-items: center;
         justify-content: center;
+        padding: 0 !important;
       }
 
+      /* Override cell padding */
       .export-grid-row .list-image-placeholder {
         width: 100%;
         height: 100%;
@@ -917,27 +943,19 @@
         background-color: #fff;
       }
 
-      /* Scaling for preview on mobile */
       #previewContentWrapper {
         width: 720px;
-        /* Match max-width of export grid */
         margin: 0 auto;
       }
 
-      /* Wrapper for scaling */
       @media (max-width: 767px) {
-
-        /* Apply scale on screens smaller than md */
         #previewHtmlContainer {
           overflow-x: auto;
         }
 
-        /* Allow horizontal scroll if needed */
         #previewContentWrapper {
           transform: scale(0.75);
-          /* Adjust scale factor as needed */
           transform-origin: top left;
-          /* Adjust width based on scale to roughly fit */
           width: calc(100% / 0.75);
           max-width: none;
         }
@@ -948,6 +966,17 @@
         /* Styles inherited */
       }
 
+      #previewHtmlContainer .export-grid-header>div,
+      #previewHtmlContainer .export-grid-row>div {
+        padding: 6px 5px;
+      }
+
+      /* Ensure padding in preview */
+      #previewHtmlContainer .export-grid-row .list-image-container {
+        padding: 0 !important;
+      }
+
+      /* Override cell padding */
       .modal-actions {
         margin-top: 15px;
         display: flex;
@@ -984,6 +1013,7 @@
               <option value="weeks" selected>Weeks</option>
               <option value="months">Months</option>
               <option value="years">Years</option>
+              <option value="all-time">All-Time</option>
             </select>
           </div>
         </div>
@@ -1129,6 +1159,7 @@
         // --- CONSTANTS ---
         const CONSTANTS = {
           COMPOSITE_KEY_SEPARATOR: ' --- ',
+          ALL_TIME_MODE_VALUE: 'all-time',
           MAX_LIST_ITEMS: 100,
           DEFAULT_PEAK_VALUE: 101, // Value indicating 'not ranked' or worse than max
           DEFAULT_EXPORT_COUNT: 15,
@@ -1152,7 +1183,6 @@
           EXPORT_ROW_BG_NEW: '#FEF9C3', // Light yellow
           EXPORT_MAX_PLAY_CHANGE_FACTOR: 1.0, // Max intensity for play change color (100% change)
         };
-
         // --- DOM Elements ---
         // Grouped by functionality for clarity
         // Upload Section
@@ -1236,6 +1266,7 @@
         let slidingWindowWeeks = CONSTANTS.DEFAULT_WINDOW_WEEKS;
         let exportCountN = CONSTANTS.DEFAULT_EXPORT_COUNT;
         let tempExportFilename = ''; // Stores filename between preview and download
+        let isAllTimeMode = false; // Flag for All-Time mode
 
         // --- Initialization ---
         checkDependencies();
@@ -1689,9 +1720,10 @@
 
         /** Validates and applies settings, re-processing data if needed */
         function handleApplySettings() {
-          const duration = parseInt(windowDurationInput.value, 10);
           const unit = windowUnitSelect.value;
           const newExportCount = parseInt(exportCountInput.value, 10);
+          let newWindowWeeks = slidingWindowWeeks; // Keep current if All-Time
+          let newIsAllTimeMode = false;
 
           // Validate Export Count
           if (
@@ -1706,55 +1738,58 @@
             return;
           }
 
-          // Validate Window Duration
-          if (isNaN(duration) || duration < CONSTANTS.MIN_WINDOW_DURATION) {
-            updateStatus(
-              `Window duration must be at least ${CONSTANTS.MIN_WINDOW_DURATION} ${unit}.`,
-              true
-            );
-            return;
-          }
+          if (unit === CONSTANTS.ALL_TIME_MODE_VALUE) {
+            newIsAllTimeMode = true;
+            // newWindowWeeks remains unchanged, it's not used in all-time mode calculation
+          } else {
+            const duration = parseInt(windowDurationInput.value, 10);
+            if (isNaN(duration) || duration < CONSTANTS.MIN_WINDOW_DURATION) {
+              updateStatus(
+                `Window duration must be at least ${CONSTANTS.MIN_WINDOW_DURATION} ${unit}.`,
+                true
+              );
+              return;
+            }
+            // Calculate new window duration in weeks
+            switch (unit) {
+              case 'months':
+                newWindowWeeks = duration * 4;
+                break;
+              case 'years':
+                newWindowWeeks = duration * 52;
+                break;
+              default:
+                newWindowWeeks = duration; // Weeks
+            }
 
-          // Calculate new window duration in weeks
-          let newWindowWeeks;
-          switch (unit) {
-            case 'months':
-              newWindowWeeks = duration * 4;
-              break;
-            case 'years':
-              newWindowWeeks = duration * 52;
-              break;
-            default:
-              newWindowWeeks = duration; // Weeks
-          }
-
-          // Check against available data range if data is loaded
-          if (
-            processedData.allWeeks.length > 0 &&
-            newWindowWeeks > processedData.allWeeks.length
-          ) {
-            updateStatus(
-              `Window duration (${newWindowWeeks} weeks) cannot exceed available data range (${processedData.allWeeks.length} weeks).`,
-              true
-            );
-            return;
-          }
-          if (newWindowWeeks < 1) {
-            // Should be caught by MIN_WINDOW_DURATION check, but double-check
-            updateStatus('Window duration must be at least 1 week.', true);
-            return;
+            // Check against available data range if data is loaded
+            if (
+              processedData.allWeeks.length > 0 &&
+              newWindowWeeks > processedData.allWeeks.length
+            ) {
+              updateStatus(
+                `Window duration (${newWindowWeeks} weeks) cannot exceed available data range (${processedData.allWeeks.length} weeks).`,
+                true
+              );
+              return;
+            }
+            if (newWindowWeeks < 1) {
+              // Should be caught by MIN_WINDOW_DURATION check, but double-check
+              updateStatus('Window duration must be at least 1 week.', true);
+              return;
+            }
           }
 
           const settingsChanged =
+            newIsAllTimeMode !== isAllTimeMode ||
             newWindowWeeks !== slidingWindowWeeks ||
             newExportCount !== exportCountN;
 
-          // Update global settings state
-          slidingWindowWeeks = newWindowWeeks;
+          isAllTimeMode = newIsAllTimeMode;
+          slidingWindowWeeks = newWindowWeeks; // Store even if all-time, for switching back
           exportCountN = newExportCount;
-          exportImageBtn.textContent = `Export Top ${exportCountN}`; // Update button text
-
-          closeSettings(); // Hide settings panel
+          exportImageBtn.textContent = `Export Top ${exportCountN}`;
+          settingsSection.style.display = 'none';
 
           if (settingsChanged && processedData.rawData.length > 0) {
             // Re-process data only if settings actually changed and data exists
@@ -1781,7 +1816,6 @@
                   }.`,
                   true
                 );
-                // Consider resetting settings to previous state or disabling UI
               }
             }, 10); // Small delay
           } else if (!settingsChanged) {
@@ -1801,6 +1835,15 @@
           console.log('Starting file processing...');
           resetState(); // Reset application state before processing new file
 
+          if (
+            typeof Papa === 'undefined' ||
+            !Papa ||
+            typeof Papa.parse !== 'function'
+          ) {
+            updateStatus('Error: CSV parsing library failed.', true);
+            resetState();
+            return;
+          }
           Papa.parse(file, {
             header: true,
             skipEmptyLines: true,
@@ -1926,7 +1969,7 @@
           artistTopSongsContainer.style.display = 'none';
           listContainer.innerHTML = '';
           listHeaderContainer.style.display = 'none';
-          chartContainerDiv.style.display = 'none'; // Hide chart area too
+          chartContainerDiv.style.display = 'none';
           chartInfo.textContent = '';
           updateStatus('No file selected.');
           searchInput.value = '';
@@ -1940,8 +1983,9 @@
           // Reset variables
           selectedHistoryEntity = { key: null, type: null };
           currentWeekIndex = -1;
-          slidingWindowWeeks = CONSTANTS.DEFAULT_WINDOW_WEEKS; // Reset to default
-          exportCountN = CONSTANTS.DEFAULT_EXPORT_COUNT; // Reset to default
+          slidingWindowWeeks = CONSTANTS.DEFAULT_WINDOW_WEEKS;
+          exportCountN = CONSTANTS.DEFAULT_EXPORT_COUNT;
+          isAllTimeMode = false;
           tempExportFilename = '';
 
           // Reset button states
@@ -1953,22 +1997,29 @@
           updateSettingsUI();
         }
 
-        /** Updates the settings modal UI elements to reflect current state */
+        // --- Settings Functions ---
         function updateSettingsUI() {
           exportCountInput.value = exportCountN;
-
-          // Determine best unit to display based on slidingWindowWeeks
-          if (slidingWindowWeeks % 52 === 0 && slidingWindowWeeks >= 52) {
-            windowDurationInput.value = slidingWindowWeeks / 52;
-            windowUnitSelect.value = 'years';
-          } else if (slidingWindowWeeks % 4 === 0 && slidingWindowWeeks >= 4) {
-            // Prioritize months if divisible by 4 (and not a whole year)
-            windowDurationInput.value = slidingWindowWeeks / 4;
-            windowUnitSelect.value = 'months';
+          if (isAllTimeMode) {
+            windowUnitSelect.value = CONSTANTS.ALL_TIME_MODE_VALUE;
+            windowDurationInput.value = '';
+            windowDurationInput.disabled = true;
           } else {
-            // Default to weeks
-            windowDurationInput.value = slidingWindowWeeks;
-            windowUnitSelect.value = 'weeks';
+            if (slidingWindowWeeks % 52 === 0 && slidingWindowWeeks >= 52) {
+              windowDurationInput.value = slidingWindowWeeks / 52;
+              windowUnitSelect.value = 'years';
+            } else if (
+              slidingWindowWeeks % 4 === 0 &&
+              slidingWindowWeeks >= 4
+            ) {
+              windowDurationInput.value = slidingWindowWeeks / 4;
+              windowUnitSelect.value = 'months';
+            } else {
+              // Default to weeks
+              windowDurationInput.value = slidingWindowWeeks;
+              windowUnitSelect.value = 'weeks';
+            }
+            windowDurationInput.disabled = false;
           }
         }
 
@@ -2022,35 +2073,34 @@
         /** Processes the raw listening data into structured format with history */
         function processListeningData(rawData) {
           console.log(
-            `Processing listening data (Window: ${slidingWindowWeeks} weeks)...`
+            `Processing listening data (Window: ${
+              isAllTimeMode ? 'All-Time' : slidingWindowWeeks + ' weeks'
+            })...`
           );
           const startTime = performance.now();
 
           // 1. Aggregate weekly counts and basic entity details
           const { weeklyCounts, entityDetails } =
             aggregateWeeklyCounts(rawData);
-          console.log(
-            `Step 1 (Aggregation) took: ${performance.now() - startTime} ms`
-          );
           const step1Time = performance.now();
+          console.log(`Step 1 (Aggregation) took: ${step1Time - startTime} ms`);
 
           // 2. Get sorted list of all unique week start dates
           const allWeeks = Array.from(weeklyCounts.keys())
             .map(dateFns.parseISO)
             .sort(dateFns.compareAsc);
-
-          if (allWeeks.length === 0) {
+          if (allWeeks.length === 0)
             throw new Error('No valid listening data found after aggregation.');
-          }
           processedData.allWeeks = allWeeks;
 
-          // 3. Calculate sliding window ranks for each week
-          const { tempTrackHistory, tempArtistHistory } =
-            calculateSlidingWindowRanks(allWeeks, weeklyCounts);
-          console.log(
-            `Step 2 (Sliding Window) took: ${performance.now() - step1Time} ms`
+          // 3. Calculate ranks for each week (Sliding Window or All-Time)
+          const { tempTrackHistory, tempArtistHistory } = calculateRanks(
+            allWeeks,
+            weeklyCounts,
+            isAllTimeMode
           );
           const step2Time = performance.now();
+          console.log(`Step 2 (Ranking) took: ${step2Time - step1Time} ms`);
 
           // 4. Calculate status, peak position, weeks on chart, etc. and finalize data structure
           const finalTracks = calculateHistoryStats(
@@ -2061,8 +2111,9 @@
             tempArtistHistory,
             entityDetails.artists
           );
+          const step3Time = performance.now();
           console.log(
-            `Step 3 (History Stats) took: ${performance.now() - step2Time} ms`
+            `Step 3 (History Stats) took: ${step3Time - step2Time} ms`
           );
 
           // Update global state
@@ -2187,41 +2238,67 @@
           if (!detail.artistKey && artistKey) detail.artistKey = artistKey;
         }
 
-        /** Step 2: Calculates sliding window scores and ranks for each week */
-        function calculateSlidingWindowRanks(allWeeks, weeklyCounts) {
-          const tempTrackHistory = new Map(); // trackKey -> [{ week, rank, playsInWindow }]
-          const tempArtistHistory = new Map(); // artistKey -> [{ week, rank, playsInWindow }]
+        /** Step 2: Calculates ranks based on mode (Sliding or All-Time) */
+        function calculateRanks(allWeeks, weeklyCounts, isAllTime) {
+          const tempTrackHistory = new Map();
+          const tempArtistHistory = new Map();
+          const cumulativeTrackPlays = new Map(); // Used only in all-time mode
+          const cumulativeArtistPlays = new Map(); // Used only in all-time mode
 
-          allWeeks.forEach((currentWeekDate) => {
-            const windowTrackPlays = new Map();
-            const windowArtistPlays = new Map();
+          allWeeks.forEach((currentWeekDate, weekIndex) => {
+            const currentWeekKey = formatDateKey(currentWeekDate);
+            let windowTrackPlays = new Map();
+            let windowArtistPlays = new Map();
 
-            // Sum counts over the sliding window period
-            for (let i = 0; i < slidingWindowWeeks; i++) {
-              const weekInWindowDate = dateFns.subWeeks(currentWeekDate, i);
-              const weekInWindowKey = formatDateKey(weekInWindowDate);
-
-              if (weeklyCounts.has(weekInWindowKey)) {
-                const weekData = weeklyCounts.get(weekInWindowKey);
-                weekData.trackCounts.forEach((count, key) =>
-                  windowTrackPlays.set(
+            if (isAllTime) {
+              // --- All-Time Calculation ---
+              // Add current week's plays to cumulative totals
+              const currentWeekData = weeklyCounts.get(currentWeekKey);
+              if (currentWeekData) {
+                currentWeekData.trackCounts.forEach((count, key) => {
+                  cumulativeTrackPlays.set(
                     key,
-                    (windowTrackPlays.get(key) || 0) + count
-                  )
-                );
-                weekData.artistCounts.forEach((count, key) =>
-                  windowArtistPlays.set(
+                    (cumulativeTrackPlays.get(key) || 0) + count
+                  );
+                });
+                currentWeekData.artistCounts.forEach((count, key) => {
+                  cumulativeArtistPlays.set(
                     key,
-                    (windowArtistPlays.get(key) || 0) + count
-                  )
-                );
+                    (cumulativeArtistPlays.get(key) || 0) + count
+                  );
+                });
+              }
+              // Rank based on cumulative totals *up to this week*
+              windowTrackPlays = new Map(cumulativeTrackPlays); // Copy map for ranking
+              windowArtistPlays = new Map(cumulativeArtistPlays); // Copy map
+            } else {
+              // --- Sliding Window Calculation ---
+              for (let i = 0; i < slidingWindowWeeks; i++) {
+                const weekInWindowDate = dateFns.subWeeks(currentWeekDate, i);
+                const weekInWindowKey = formatDateKey(weekInWindowDate);
+
+                if (weeklyCounts.has(weekInWindowKey)) {
+                  const weekData = weeklyCounts.get(weekInWindowKey);
+                  weekData.trackCounts.forEach((count, key) =>
+                    windowTrackPlays.set(
+                      key,
+                      (windowTrackPlays.get(key) || 0) + count
+                    )
+                  );
+                  weekData.artistCounts.forEach((count, key) =>
+                    windowArtistPlays.set(
+                      key,
+                      (windowArtistPlays.get(key) || 0) + count
+                    )
+                  );
+                }
               }
             }
 
-            // Rank tracks for the current week
+            // Rank and store history entry for the current week
             const rankedTracks = Array.from(windowTrackPlays.entries())
               .sort(([, playsA], [, playsB]) => playsB - playsA)
-              .slice(0, CONSTANTS.MAX_LIST_ITEMS); // Limit to top N
+              .slice(0, CONSTANTS.MAX_LIST_ITEMS);
 
             rankedTracks.forEach(([key, plays], index) => {
               if (!tempTrackHistory.has(key)) tempTrackHistory.set(key, []);
@@ -2232,11 +2309,9 @@
               });
             });
 
-            // Rank artists for the current week
             const rankedArtists = Array.from(windowArtistPlays.entries())
               .sort(([, playsA], [, playsB]) => playsB - playsA)
-              .slice(0, CONSTANTS.MAX_LIST_ITEMS); // Limit to top N
-
+              .slice(0, CONSTANTS.MAX_LIST_ITEMS);
             rankedArtists.forEach(([key, plays], index) => {
               if (!tempArtistHistory.has(key)) tempArtistHistory.set(key, []);
               tempArtistHistory.get(key).push({
