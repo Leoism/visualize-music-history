@@ -1,0 +1,25 @@
+export const COMPOSITE_KEY_SEPARATOR = ' --- ';
+export const ALL_TIME_MODE_VALUE = 'all-time';
+export const MAX_LIST_ITEMS = 100;
+export const DEFAULT_PEAK_VALUE = 101; // Value indicating 'not ranked' or worse than max
+export const DEFAULT_EXPORT_COUNT = 15;
+export const MIN_EXPORT_COUNT = 1;
+export const MAX_EXPORT_COUNT = 100;
+export const DEFAULT_WINDOW_WEEKS = 4;
+export const MIN_WINDOW_DURATION = 1;
+export const SEARCH_DEBOUNCE_MS = 150; // Delay for hiding suggestions on blur
+export const EXPORT_CONTAINER_ID = 'exportContainer';
+export const EXPORT_IMAGE_WIDTH = 800; // Width of the off-screen container for export
+export const EXPORT_PRELOAD_TIMEOUT = 150; // Short delay before generating canvas
+export const CHART_POINT_RADIUS = 3;
+export const CHART_POINT_HOVER_RADIUS = 5;
+export const CHART_TENSION = 0.1;
+export const CHART_BORDER_COLOR = '#4f46e5';
+export const CHART_BACKGROUND_COLOR = '#c7d2fe';
+export const EXPORT_BG_GRADIENT =
+  'linear-gradient(to bottom, #e0f2fe, #bfdbfe)';
+export const EXPORT_ROW_BG_BASE = '#FFFFFF';
+export const EXPORT_ROW_BG_POSITIVE = '#6EE7B7'; // Light green
+export const EXPORT_ROW_BG_NEGATIVE = '#FCA5A5'; // Light red
+export const EXPORT_ROW_BG_NEW = '#FEF9C3'; // Light yellow
+export const EXPORT_MAX_PLAY_CHANGE_FACTOR = 1.0; // Max intensity for play change color (100% change)
