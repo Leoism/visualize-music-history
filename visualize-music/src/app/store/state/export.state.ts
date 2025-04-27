@@ -6,16 +6,19 @@ export interface ExportState {
   isGeneratingImage: boolean;
 
   /** The generated HTML content string to be displayed in the preview modal */
-  exportPreviewHtml?: string;
+  exportPreviewHtml: string | null;
 
   /** The proposed filename for the exported image */
-  exportFilename?: string;
+  exportFilename: string | null;
 
   /** Stores any error message related to the export process */
-  exportError?: string;
+  exportError: string | null;
 }
 
 export const initialExportState: ExportState = {
   isGeneratingPreview: false,
   isGeneratingImage: false,
+  exportPreviewHtml: null,
+  exportFilename: null,
+  exportError: null,
 };

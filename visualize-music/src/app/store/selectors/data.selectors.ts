@@ -15,12 +15,12 @@ import {
   TrackData,
 } from '../../common/interfaces/data.interfaces';
 import { DataState } from '../state/data.state'; // Adjust path if needed
+
 import {
-  selectCurrentWeekDateString,
+  selectCurrentWeekIndex,
   selectSelectedEntityType,
   selectSelectedHistoryEntity,
 } from './ui.selectors'; // Import relevant UI selectors
-
 // --- Helper Function (example - move to utils if preferred) ---
 // This encapsulates the logic previously in prepareTop100ListData
 function getListDataForWeek(
@@ -29,6 +29,7 @@ function getListDataForWeek(
   entityType: EntityType | null
 ): ChartItem[] {
   const listData: ChartItem[] = [];
+  console.log('hello');
   if (!dataMap || !weekKey || !entityType) {
     return [];
   }
@@ -75,7 +76,7 @@ export const selectDataState = createFeatureSelector<DataState>('data'); // 'dat
 
 export const selectRawData = createSelector(
   selectDataState,
-  (state: DataState): RawDataEntry[] | null => state.rawData
+  (state: DataState): RawDataEntry[] => state.rawData
 );
 
 export const selectProcessedData = createSelector(
@@ -112,18 +113,74 @@ export const selectAllArtistsMap = createSelector(
     processedData?.artists ?? new Map()
 );
 
+/** Selects the Date object for the currently selected week, or null */
+export const selectCurrentWeekDate = createSelector(
+  selectAllWeeks, // From data.selectors
+  selectCurrentWeekIndex,
+  (allWeeks: Date[], weekIndex: number): Date | undefined => {
+    if (!allWeeks || allWeeks.length === 0) {
+      return undefined;
+    }
+    const maxIndex = allWeeks.length - 1;
+    const targetIndex = weekIndex === -1 ? maxIndex : weekIndex;
+
+    if (targetIndex >= 0 && targetIndex <= maxIndex) {
+      return allWeeks[targetIndex];
+    }
+    return undefined; // Index out of bounds
+  }
+);
+
+/** Selects the formatted date string (yyyy-MM-dd) for the current week, or null */
+export const selectCurrentWeekDateString = createSelector(
+  selectCurrentWeekDate,
+  (date: Date | undefined): string | undefined => {
+    console.log('woof');
+    return date ? formatDateKey(date) : undefined;
+  }
+);
+
+/** Selects whether the "Previous Week" navigation should be enabled */
+export const selectCanNavigatePrev = createSelector(
+  selectAllWeeks, // From data.selectors
+  selectCurrentWeekIndex,
+  (allWeeks: Date[], weekIndex: number): boolean => {
+    if (!allWeeks || allWeeks.length === 0) {
+      return false;
+    }
+    const maxIndex = allWeeks.length - 1;
+    const currentIndex = weekIndex === -1 ? maxIndex : weekIndex;
+    return currentIndex > 0;
+  }
+);
+
+/** Selects whether the "Next Week" navigation should be enabled */
+export const selectCanNavigateNext = createSelector(
+  selectAllWeeks, // From data.selectors
+  selectCurrentWeekIndex,
+  (allWeeks: Date[], weekIndex: number): boolean => {
+    if (!allWeeks || allWeeks.length === 0) {
+      return false;
+    }
+    const maxIndex = allWeeks.length - 1;
+    // Cannot navigate forward if already at the latest week (-1 or maxIndex)
+    return weekIndex !== -1 && weekIndex < maxIndex;
+  }
+);
+
 // --- Derived Selectors (Combining Data and UI state) ---
 
 /** Selects the formatted list data (Top 100) for the currently selected week and entity type */
 export const selectListDataForCurrentWeek = createSelector(
   selectProcessedData,
-  selectCurrentWeekDateString, // From ui.selectors
   selectSelectedEntityType, // From ui.selectors
+  selectCurrentWeekDateString, // From ui.selectors
   (
     processedData: ProcessedData | null,
-    weekKey: string | null,
-    entityType: EntityType | null
+    entityType: EntityType | null,
+    weekKey?: string
   ): ChartItem[] => {
+    console.log('meow');
     if (!processedData || !weekKey || !entityType) {
       return [];
     }
@@ -140,13 +197,13 @@ export const selectHistoryDataForSelectedEntity = createSelector(
   selectSelectedHistoryEntity, // From ui.selectors
   (
     processedData: ProcessedData | null,
-    selectedEntity: { key: EntityKey; type: EntityType } | null
+    selectedEntity: { key: EntityKey; entityType: EntityType } | null
   ): TrackData | ArtistData | null => {
     if (!processedData || !selectedEntity) {
       return null;
     }
     const dataMap =
-      selectedEntity.type === 'track'
+      selectedEntity.entityType === 'track'
         ? processedData.tracks
         : processedData.artists;
     return dataMap?.get(selectedEntity.key) ?? null;
@@ -176,12 +233,12 @@ export const selectArtistTopSongsForArtistHistory = createSelector(
   selectSelectedHistoryEntity, // This should be an artist entity when relevant
   (
     tracksMap: Map<EntityKey, TrackData>,
-    selectedEntity: { key: EntityKey; type: EntityType } | null
+    selectedEntity: { key: EntityKey; entityType: EntityType } | null
   ): any[] => {
     // Define a specific interface later if needed
     if (
       !selectedEntity ||
-      selectedEntity.type !== 'artist' ||
+      selectedEntity.entityType !== 'artist' ||
       tracksMap.size === 0
     ) {
       return [];

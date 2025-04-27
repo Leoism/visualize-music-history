@@ -6,12 +6,15 @@ import { AppState } from '../../store/state/app.state';
 import * as DataActions from '../../store/actions/data.actions';
 import * as UiSelectors from '../../store/selectors/ui.selectors';
 import * as DataSelectors from '../../store/selectors/data.selectors';
+import { AsyncPipe, CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-file-upload',
-  templateUrl: './file-upload.component.html',
-  styleUrls: ['./file-upload.component.scss'],
+  templateUrl: './file_upload.ng.html',
+  styleUrls: ['./file_upload.scss'],
+  imports: [AsyncPipe, CommonModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
 })
 export class FileUploadComponent {
   statusMessage$: Observable<string | null> = this.store.select(

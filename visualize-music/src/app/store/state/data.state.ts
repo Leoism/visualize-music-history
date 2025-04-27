@@ -5,7 +5,7 @@ import {
 
 export interface DataState {
   /** The raw data directly parsed from the CSV file */
-  rawData: RawDataEntry[] | null;
+  rawData: RawDataEntry[];
 
   /** The structured data after aggregation, ranking, and history calculation */
   processedData: ProcessedData | null;
@@ -18,8 +18,8 @@ export interface DataState {
 }
 
 export const initialDataState: DataState = {
-  rawData: null,
-  processedData: null,
+  rawData: [],
   isProcessing: false,
+  processedData: null,
   processingError: null,
 };

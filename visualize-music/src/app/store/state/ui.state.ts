@@ -11,10 +11,10 @@ export interface UiState {
   selectedEntityType: EntityType;
 
   /** Holds the key and type of the specific track or artist being viewed in the history mode, null otherwise */
-  selectedHistoryEntity?: { key: EntityKey; type: EntityType };
+  selectedHistoryEntity: { key: EntityKey; entityType: EntityType } | null;
 
   /** A general status message to display to the user (e.g., 'Processing...', 'Loaded.') */
-  statusMessage?: string;
+  statusMessage: string | null;
 
   /** Flag indicating if the current statusMessage represents an error */
   isErrorStatus: boolean;
@@ -30,6 +30,7 @@ export const initialUiState: UiState = {
   currentView: 'upload', // Start at the upload screen
   currentWeekIndex: -1, // Default to the latest week when data loads
   selectedEntityType: 'track', // Default to showing tracks
+  selectedHistoryEntity: null,
   statusMessage: 'No file selected.', // Initial status message
   isErrorStatus: false,
   isSettingsPanelOpen: false,

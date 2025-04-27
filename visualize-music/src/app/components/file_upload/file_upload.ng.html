@@ -1,0 +1,47 @@
+<section class="mb-6 sm:mb-10 max-w-xl content-wrapper mx-auto">
+  <h2 class="text-xl font-semibold mb-5 text-gray-700">
+    Upload your Listening History CSV
+  </h2>
+
+  <div
+    id="dropZone"
+    (drop)="handleDrop($event)"
+    (dragover)="handleDragOver($event)"
+    (dragleave)="handleDragLeave($event)"
+    [class.dragover]="isDragOver"
+    class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer transition-colors duration-200 ease-in-out hover:border-gray-400"
+  >
+    <p class="text-gray-500">
+      Drag & drop your CSV file here, or click to select
+    </p>
+    <input
+      type="file"
+      id="csvFileInput"
+      accept=".csv"
+      class="hidden"
+      (change)="onFileSelected($event)"
+      #fileInput
+    />
+  </div>
+
+  <div class="text-center mt-5">
+    <button
+      class="button"
+      (click)="fileInput.click()"
+      [disabled]="isProcessing$ | async"
+    >
+      {{ (isProcessing$ | async) ? 'Processing...' : 'Select CSV File' }}
+    </button>
+  </div>
+
+  <p
+    id="status"
+    class="text-center mt-4 min-h-[1.5em]"
+    [ngClass]="{
+      'text-red-600 font-medium': isErrorStatus$ | async,
+      'text-gray-600 italic': !(isErrorStatus$ | async)
+      }"
+  >
+    {{ (statusMessage$ | async) || 'No file selected.' }}
+  </p>
+</section>
