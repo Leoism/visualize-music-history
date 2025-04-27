@@ -9,51 +9,6 @@ export const dataReducer = createReducer(
   // Initial State
   initialDataState,
 
-  // --- Handling File Parsing ---
-
-  /** When parsing starts (file selected/dropped):
-   * - Reset all data (raw, processed).
-   * - Set processing flag to true.
-   * - Clear any previous errors.
-   */
-  on(
-    DataActions.parseFileStart,
-    (unused): DataState => ({
-      ...initialDataState, // Reset to initial state
-      isProcessing: true, // Set loading flag
-    })
-  ),
-
-  /** When parsing succeeds:
-   * - Store the raw data.
-   * - Keep processing flag true (as data processing usually follows).
-   * - Error remains null.
-   */
-  on(
-    DataActions.parseFileSuccess,
-    (state, { rawData }): DataState => ({
-      ...state,
-      rawData: rawData,
-      isProcessing: true, // Still processing (now the data itself)
-    })
-  ),
-
-  /** When parsing fails:
-   * - Clear any existing data (should already be cleared by parseFileStart).
-   * - Set processing flag to false.
-   * - Store the error message.
-   */
-  on(
-    DataActions.parseFileFailure,
-    (state, { error }): DataState => ({
-      ...initialDataState, // Reset to initial state
-      isProcessing: false, // Stop loading
-      processingError: error,
-    })
-  ),
-
-  // --- Handling Data Processing ---
-
   /** When data processing starts (triggered by effect after parse success or settings change):
    * - Ensure processing flag is true.
    * - Clear previous processed data.

@@ -14,5 +14,6 @@ export const initialSettingsState: SettingsState = {
     windowUnit: 'weeks',
     exportCount: DEFAULT_EXPORT_COUNT,
     isAllTimeMode: false,
+    slidingWindowWeeks: DEFAULT_WINDOW_WEEKS,
   },
 };

@@ -15,6 +15,5 @@ export interface Settings {
   /** Derived flag indicating if the 'all-time' mode is selected (based on windowUnit) */
   isAllTimeMode: boolean;
 
-  // Delete maybe
-  slidingWindowWeeks?: number;
+  slidingWindowWeeks: number;
 }

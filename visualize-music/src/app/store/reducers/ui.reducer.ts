@@ -5,6 +5,7 @@ import { UiState, initialUiState } from '../state/ui.state';
 import * as UiActions from '../actions/ui.actions';
 import * as DataActions from '../actions/data.actions';
 import * as ExportActions from '../actions/export.actions'; // Need export actions too
+import * as FileUploadActions from '../actions/file_upload.actions'; // For file upload actions
 
 export const uiReducer = createReducer(
   // Initial State
@@ -98,7 +99,7 @@ export const uiReducer = createReducer(
 
   // React to Data actions to update status implicitly
   on(
-    DataActions.parseFileStart,
+    FileUploadActions.parseFileStart,
     DataActions.processDataStart,
     (state): UiState => ({
       ...state,
@@ -109,7 +110,7 @@ export const uiReducer = createReducer(
   // Note: Success/Failure status updates might be better handled by effects dispatching setStatusMessage
   // Or you can handle them directly here too:
   on(
-    DataActions.parseFileFailure,
+    FileUploadActions.parseFileFailure,
     DataActions.processDataFailure,
     (state, { error }): UiState => ({
       ...state,

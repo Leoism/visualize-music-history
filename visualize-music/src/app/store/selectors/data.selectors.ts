@@ -10,7 +10,9 @@ import {
   EntityKey,
   EntityType,
   HistoryEntry,
+  ProcessedArtistData,
   ProcessedData,
+  ProcessedTrackData,
   RawDataEntry,
   TrackData,
 } from '../../common/interfaces/data.interfaces';
@@ -24,7 +26,7 @@ import {
 // --- Helper Function (example - move to utils if preferred) ---
 // This encapsulates the logic previously in prepareTop100ListData
 function getListDataForWeek(
-  dataMap: Map<EntityKey, TrackData | ArtistData> | undefined,
+  dataMap: Map<EntityKey, ProcessedTrackData | ProcessedArtistData> | undefined,
   weekKey: string | null,
   entityType: EntityType | null
 ): ChartItem[] {
@@ -42,15 +44,18 @@ function getListDataForWeek(
     if (rankEntry && rankEntry.rank <= MAX_LIST_ITEMS) {
       // Only include items actually in the top N for that week
       const isTrack = entityType === 'track';
-      const trackData = data as TrackData; // Type assertion
-      const artistData = data as ArtistData; // Type assertion
+      const trackData = data as ProcessedTrackData; // Type assertion
+      const artistData = data as ProcessedArtistData; // Type assertion
 
       listData.push({
         key: key,
         entityType: entityType, // Pass the type along
-        name: (isTrack ? trackData.trackName : artistData.artistName) || key,
-        artistName: isTrack ? trackData.artistName : undefined,
-        albumMbid: isTrack ? trackData.albumMbid : undefined,
+        name:
+          (isTrack
+            ? trackData.details.trackName
+            : artistData.details.artistName) || key,
+        artistName: isTrack ? trackData.details.artistName : null,
+        albumMbid: isTrack ? trackData.details.albumMbid : null,
         rank: rankEntry.rank,
         plays: rankEntry.playsInWindow,
         status: rankEntry.status,
@@ -73,11 +78,6 @@ function getListDataForWeek(
 export const selectDataState = createFeatureSelector<DataState>('data'); // 'data' must match the key in appReducers
 
 // --- Basic Property Selectors ---
-
-export const selectRawData = createSelector(
-  selectDataState,
-  (state: DataState): RawDataEntry[] => state.rawData
-);
 
 export const selectProcessedData = createSelector(
   selectDataState,
@@ -198,7 +198,7 @@ export const selectHistoryDataForSelectedEntity = createSelector(
   (
     processedData: ProcessedData | null,
     selectedEntity: { key: EntityKey; entityType: EntityType } | null
-  ): TrackData | ArtistData | null => {
+  ): ProcessedArtistData | ProcessedTrackData | null => {
     if (!processedData || !selectedEntity) {
       return null;
     }
@@ -216,12 +216,12 @@ export const selectArtistDetailsForTrackHistory = createSelector(
   selectHistoryDataForSelectedEntity, // This selector should yield TrackData when this is relevant
   (
     artistsMap: Map<EntityKey, ArtistData>,
-    currentEntityData: TrackData | ArtistData | null
+    currentEntityData: ProcessedTrackData | ProcessedArtistData | null
   ): ArtistData | null => {
     // Ensure the current entity is a track and has an artist key
-    const trackData = currentEntityData as TrackData; // Type assertion
-    if (trackData?.artistKey) {
-      return artistsMap.get(trackData.artistKey) ?? null;
+    const trackData = currentEntityData as ProcessedTrackData; // Type assertion
+    if (trackData?.details?.artistKey) {
+      return artistsMap.get(trackData.details?.artistKey) ?? null;
     }
     return null;
   }

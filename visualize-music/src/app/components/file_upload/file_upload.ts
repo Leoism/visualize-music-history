@@ -3,7 +3,7 @@ import { Store } from '@ngrx/store';
 import { Observable } from 'rxjs';
 
 import { AppState } from '../../store/state/app.state';
-import * as DataActions from '../../store/actions/data.actions';
+import * as FileUploadActions from '../../store/actions/file_upload.actions';
 import * as UiSelectors from '../../store/selectors/ui.selectors';
 import * as DataSelectors from '../../store/selectors/data.selectors';
 import { AsyncPipe, CommonModule } from '@angular/common';
@@ -77,10 +77,10 @@ export class FileUploadComponent {
   private processFile(file: File): void {
     if (file && file.type === 'text/csv') {
       console.log(`File selected/dropped: ${file.name}`);
-      this.store.dispatch(DataActions.parseFileStart({ file }));
+      this.store.dispatch(FileUploadActions.parseFileStart({ file }));
     } else {
       this.store.dispatch(
-        DataActions.parseFileFailure({
+        FileUploadActions.parseFileFailure({
           error: 'Invalid file type. Please upload a CSV file.',
         })
       );
