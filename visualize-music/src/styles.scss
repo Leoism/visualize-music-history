@@ -1,5 +1,3 @@
-@import "tailwindcss";
-
 /* Base styles */
 body {
   font-family: "Inter", sans-serif;
@@ -99,3 +97,5 @@ input[type="date"] {
 
   /* Keep search full width */
 }
+
+@import "tailwindcss";

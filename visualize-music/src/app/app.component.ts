@@ -1,13 +1,10 @@
 import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { FileUploadComponent } from './components/file_upload/file_upload';
-import { NgModule } from '@angular/core';
-import { StoreModule } from '@ngrx/store';
-import { appReducers } from './store/reducers';
+import { FileUploadPage } from './pages/file_upload/file_upload';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, FileUploadComponent],
+  imports: [RouterOutlet, FileUploadPage],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
 })
