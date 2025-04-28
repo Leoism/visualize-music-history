@@ -24,7 +24,7 @@ export const routes: Routes = [
   {
     path: 'charts/:weekId', // Expects YYYY-MM-DD format
     component: HomePage,
-    // canActivate: [dataExistsRouteGuard],
+    canActivate: [dataExistsRouteGuard],
   },
 
   {

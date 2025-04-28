@@ -135,7 +135,6 @@ export const selectCurrentWeekDate = createSelector(
 export const selectCurrentWeekDateString = createSelector(
   selectCurrentWeekDate,
   (date: Date | undefined): string | undefined => {
-    console.log('woof');
     return date ? formatDateKey(date) : undefined;
   }
 );

@@ -1,5 +1,9 @@
 import { ApplicationConfig, importProvidersFrom } from '@angular/core';
-import { provideRouter, withComponentInputBinding } from '@angular/router';
+import {
+  provideRouter,
+  withComponentInputBinding,
+  withHashLocation,
+} from '@angular/router';
 
 import { provideEffects } from '@ngrx/effects';
 import { provideStore, StoreModule } from '@ngrx/store';
@@ -12,7 +16,7 @@ import { StoreDevtoolsModule } from '@ngrx/store-devtools';
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideRouter(routes, withComponentInputBinding()),
+    provideRouter(routes, withComponentInputBinding(), withHashLocation()),
     provideStore(),
     importProvidersFrom(
       StoreModule.forRoot(appReducers),

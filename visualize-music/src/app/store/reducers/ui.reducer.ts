@@ -6,7 +6,7 @@ import * as ExportActions from '../actions/export.actions';
 import * as FileUploadActions from '../actions/file_upload.actions';
 import * as UiActions from '../actions/ui.actions';
 import { UiState, initialUiState } from '../state/ui.state';
-import { setCurrentWeekIndex } from '../actions/ui.actions';
+import { updateCurrentWeekIndex } from '../actions/controls.actions';
 
 export const uiReducer = createReducer(
   // Initial State
@@ -166,14 +166,14 @@ export const uiReducer = createReducer(
       isExportPreviewOpen: false,
     })
   ),
-  on(UiActions.setCurrentWeekIndex, (state, action): UiState => {
+  on(updateCurrentWeekIndex, (state, action): UiState => {
     // Avoid state change if index is already correct
-    if (state.currentWeekIndex === action.index) {
+    if (state.currentWeekIndex === action.weekIndex) {
       return state;
     }
     return {
       ...state,
-      currentWeekIndex: action.index,
+      currentWeekIndex: action.weekIndex,
       selectedHistoryEntity: null,
       currentView: 'list',
     };
