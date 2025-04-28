@@ -12,24 +12,52 @@
     id="weekNavContainer"
     class="w-full sm:w-auto flex items-center justify-center"
   >
-    <button id="prevWeekBtn" class="button" disabled>&lt; Prev</button>
-    <span
-      id="currentWeekDisplay"
-      class="mx-2 text-sm text-gray-700 whitespace-nowrap"
-      >Week: -</span
+    <button
+      class="button"
+      [disabled]="!(canGoBackward$ | async)"
+      (click)="navigateWeek('prev')"
     >
-    <button id="nextWeekBtn" class="button" disabled>Next &gt;</button>
-  </div>
-  <div
-    id="jumpToWeekContainer"
-    class="w-full sm:w-auto flex items-center justify-center"
-  >
-    <label for="weekJumpInput" class="mr-1 text-sm font-medium text-gray-700"
-      >Jump to:</label
+      &lt; Prev
+    </button>
+    @if (currentWeekString$ | async; as currentWeek) {
+      <span
+        id="currentWeekDisplay"
+        class="mx-2 text-sm text-gray-700 whitespace-nowrap"
+        >Week: {{ currentWeek }}</span
+      >
+    }
+    <button
+      class="button"
+      [disabled]="!(canGoForward$ | async)"
+      (click)="navigateWeek('next')"
     >
-    <input type="date" id="weekJumpInput" />
-    <button id="jumpToWeekBtn" class="button ml-1">Go</button>
+      Next &gt;
+    </button>
   </div>
+  @if (currentWeekString$ | async; as currentWeek) {
+    <div
+      id="jumpToWeekContainer"
+      class="w-full sm:w-auto flex items-center justify-center"
+    >
+      <label for="weekJumpInput" class="mr-1 text-sm font-medium text-gray-700"
+        >Jump to:</label
+      >
+      <input
+        type="date"
+        [value]="currentWeek"
+        [min]="minDateRange$ | async"
+        [max]="maxDateRange$ | async"
+        (change)="updateCalendarSelection($event)"
+      />
+      <button
+        id="jumpToWeekBtn"
+        class="button ml-1"
+        (click)="handleJumpToWeek()"
+      >
+        Go
+      </button>
+    </div>
+  }
   <div class="w-full sm:w-auto flex items-center justify-center gap-2">
     <button id="exportImageBtn" class="button">Export Top N</button>
     <button id="settingsBtn" class="button">Settings</button>

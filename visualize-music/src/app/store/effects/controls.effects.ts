@@ -4,7 +4,14 @@ import { Router } from '@angular/router';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
 import { of } from 'rxjs'; // Import from and Observable
-import { filter, map, switchMap, tap, withLatestFrom } from 'rxjs/operators';
+import {
+  distinctUntilChanged,
+  filter,
+  map,
+  switchMap,
+  tap,
+  withLatestFrom,
+} from 'rxjs/operators';
 import * as ControlsActions from '../actions/controls.actions'; // Import your data actions
 import {
   selectAllWeeks,
@@ -31,7 +38,7 @@ export class ControlsEffects {
       ),
       switchMap(([action, currentWeekIndex, allWeeks]) => {
         const nextWeekIndex = currentWeekIndex + 1;
-        if (nextWeekIndex >= allWeeks.length - 1 || nextWeekIndex < 0) {
+        if (nextWeekIndex >= allWeeks.length || nextWeekIndex < 0) {
           // On failure, do not change the week index
           return of(
             ControlsActions.updateCurrentWeekIndex({
@@ -57,7 +64,7 @@ export class ControlsEffects {
       ),
       switchMap(([action, currentWeekIndex, allWeeks]) => {
         const prevWeekIndex = currentWeekIndex - 1;
-        if (prevWeekIndex >= allWeeks.length - 1 || prevWeekIndex < 0) {
+        if (prevWeekIndex >= allWeeks.length || prevWeekIndex < 0) {
           // On failure, do not change the week index
           return of(
             ControlsActions.updateCurrentWeekIndex({
@@ -95,8 +102,7 @@ export class ControlsEffects {
           console.warn(
             `[UiEffects] jumpToWeek: Date ${targetDateStr} not found in allWeeks.`
           );
-          // Maybe dispatch setStatusMessage with an error?
-          return of(); // No action if date not found
+          return of();
         }
       })
     )
@@ -108,6 +114,7 @@ export class ControlsEffects {
         ofType(ControlsActions.updateCurrentWeekIndex),
         withLatestFrom(this.store.select(selectCurrentWeekDateString)),
         filter(([action, dateString]) => !!dateString),
+        distinctUntilChanged(),
         tap(([action, dateString]) => {
           this.router.navigate(['/charts', dateString], { replaceUrl: true });
         })
@@ -125,7 +132,7 @@ export class ControlsEffects {
       filter(
         ([action, allWeeks, currentIndex]) => allWeeks && allWeeks.length > 0
       ),
-      switchMap(([action, allWeeks, currentIndex]) => {
+      map(([action, allWeeks, currentIndex]) => {
         let targetIndex = -1;
         try {
           const targetDateStr = action.weekIdString;
@@ -141,14 +148,15 @@ export class ControlsEffects {
           console.log(
             `[UiEffects] Found matching index ${targetIndex}. Dispatching setCurrentWeekIndex.`
           );
-          return of(
-            ControlsActions.updateCurrentWeekIndex({
-              weekIndex: targetIndex,
-            })
-          );
+          return ControlsActions.updateCurrentWeekIndex({
+            weekIndex: targetIndex,
+          });
         }
-        return of();
-      })
+        return { type: 'No Op' };
+      }),
+      filter(
+        (action) => action.type === ControlsActions.updateCurrentWeekIndex.type
+      )
     )
   );
 }
