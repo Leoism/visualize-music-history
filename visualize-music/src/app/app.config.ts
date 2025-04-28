@@ -1,5 +1,5 @@
 import { ApplicationConfig, importProvidersFrom } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withComponentInputBinding } from '@angular/router';
 
 import { provideEffects } from '@ngrx/effects';
 import { provideStore, StoreModule } from '@ngrx/store';
@@ -10,7 +10,7 @@ import { DataEffects } from './store/effects/data.effects';
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideRouter(routes),
+    provideRouter(routes, withComponentInputBinding()),
     provideStore(),
     importProvidersFrom(StoreModule.forRoot(appReducers)),
     provideEffects([FileUploadEffects, DataEffects]),

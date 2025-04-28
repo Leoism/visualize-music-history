@@ -43,10 +43,15 @@ import {
   parseISO,
   subWeeks,
 } from 'date-fns';
+import { Router } from '@angular/router';
 
 @Injectable()
 export class DataEffects {
-  constructor(private actions$: Actions, private store: Store<AppState>) {}
+  constructor(
+    private actions$: Actions,
+    private store: Store<AppState>,
+    private router: Router
+  ) {}
 
   processDataStart$ = createEffect(() =>
     this.actions$.pipe(
@@ -83,6 +88,17 @@ export class DataEffects {
         );
       })
     )
+  );
+
+  processDataSuccess$ = createEffect(
+    () =>
+      this.actions$.pipe(
+        ofType(DataActions.processDataSuccess),
+        tap(() => {
+          this.router.navigate(['/charts']);
+        })
+      ),
+    { dispatch: false }
   );
 
   private processRawData(
