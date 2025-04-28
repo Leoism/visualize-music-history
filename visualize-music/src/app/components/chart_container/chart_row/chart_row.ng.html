@@ -1,5 +1,12 @@
 @if (item; as chartItem) {
   <div class="chart-row">
+    <div class="list-rank-change-col mobile">
+      <div class="list-rank">{{ chartItem.rank }}</div>
+      <div class="list-change {{ getRankClass(chartItem.rankStatus) }}">
+        {{ getRankText(chartItem.rankStatus) }}
+      </div>
+    </div>
+
     <div class="list-image-container">
       @if (getImageProperties(); as imageProperties) {
         @if (imageProperties.url) {
@@ -16,13 +23,6 @@
       }
     </div>
 
-    <div class="list-rank-change-col mobile">
-      <div class="list-rank">{{ chartItem.rank }}</div>
-      <div class="list-change {{ getRankClass(chartItem.rankStatus) }}">
-        {{ getRankText(chartItem.rankStatus) }}
-      </div>
-    </div>
-
     <div class="list-rank desktop">{{ chartItem.rank }}</div>
 
     <div class="list-details-stats-col">
@@ -34,7 +34,7 @@
         <span class="list-plays hidden sm:inline">
           Plays: {{ chartItem.plays }}
           @if (getPeakIcon(chartItem.peakStatus); as peakIcon) {
-            <span class="peak-indicator mobile">{{ peakIcon }}</span>
+            <span class="peak-indicator desktop">{{ peakIcon }}</span>
           }
         </span>
       </div>
@@ -64,7 +64,7 @@
     <div class="list-weeks desktop">{{ chartItem.weeksOnChart }}</div>
 
     @if (getPeakIcon(chartItem.peakStatus); as peakIcon) {
-      <span class="peak-indicator peak-indicator-mobile sm:hidden">{{
+      <span class="peak-indicator peak-indicator-mobile mobile">{{
         peakIcon
       }}</span>
     }

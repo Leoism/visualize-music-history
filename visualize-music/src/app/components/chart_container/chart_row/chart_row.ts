@@ -36,9 +36,9 @@ export class ChartRowComponent {
       statusIndicator = 'RE';
     } else if (typeof rankStatus === 'number') {
       if (rankStatus > 0) {
-        statusIndicator = `<span>▲</span> ${rankStatus}`;
+        statusIndicator = `▲ ${rankStatus}`;
       } else if (rankStatus < 0) {
-        statusIndicator = `<span>▼</span> ${Math.abs(rankStatus)}`; // Down
+        statusIndicator = `▼ ${Math.abs(rankStatus)}`; // Down
       } else {
         statusIndicator = '=';
       }

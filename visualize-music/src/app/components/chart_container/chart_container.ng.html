@@ -1,0 +1,18 @@
+<div class="list-header desktop">
+  <div>Rank</div>
+  <div></div>
+  <div>Title</div>
+  <div>Peak</div>
+  <div>Change</div>
+  <div>Weeks</div>
+</div>
+
+<div>
+  @for (item of items; track item; let index = $index) {
+    <app-chart-row class="chart-row" [item]="item"></app-chart-row>
+  }
+</div>
+
+<div class="text-center text-gray-600 mt-3">
+  Top {{ items?.length ?? 100 }} tracks: Week of {{ week }}
+</div>

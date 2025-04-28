@@ -1,3 +1,9 @@
 <p>Home page</p>
 <p>Week ID: {{ weekId }}</p>
-<app-chart-row [item]="chartItem"></app-chart-row>
+
+@if (currentWeekData$ | async; as currentWeekData) {
+  <app-chart-container
+    [items]="currentWeekData"
+    [week]="(currentWeekDate$ | async) ?? 'Unknown'"
+  ></app-chart-container>
+}
