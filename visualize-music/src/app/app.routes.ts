@@ -18,13 +18,13 @@ export const routes: Routes = [
   {
     path: 'charts',
     canActivate: [dataExistsRouteGuard, latestChartWeekRouteGuard],
-    component: HomePage,
+    children: [],
   },
 
   {
     path: 'charts/:weekId', // Expects YYYY-MM-DD format
     component: HomePage,
-    canActivate: [dataExistsRouteGuard],
+    // canActivate: [dataExistsRouteGuard],
   },
 
   {

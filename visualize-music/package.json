@@ -21,6 +21,7 @@
     "@angular/router": "^19.2.8",
     "@ngrx/effects": "^19.1.0",
     "@ngrx/store": "^19.1.0",
+    "@ngrx/store-devtools": "^19.1.0",
     "@tailwindcss/postcss": "^4.1.4",
     "date-fns": "^4.1.0",
     "papaparse": "^5.5.2",

@@ -1,0 +1,36 @@
+/* Controls Area - Responsive */
+.controls-area {
+  display: grid;
+  grid-template-columns: 1fr;
+  /* Stack vertically by default */
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* Adjust layout for medium screens and up */
+@media (min-width: 768px) {
+  .controls-area {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    /* More flexible grid */
+    justify-content: center;
+    align-items: center;
+    gap: 0.75rem 1.5rem;
+  }
+
+  /* Group week nav and jump together */
+  #weekNavContainer,
+  #jumpToWeekContainer {
+    justify-content: center;
+  }
+}
+
+/* Ensure buttons don't take full width unless needed */
+.controls-area > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+}

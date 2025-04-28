@@ -1,11 +1,12 @@
-// src/app/store/reducers/ui.reducer.ts
+import * as ControlsActions from '../actions/controls.actions';
 
 import { createReducer, on } from '@ngrx/store';
-import { UiState, initialUiState } from '../state/ui.state';
-import * as UiActions from '../actions/ui.actions';
 import * as DataActions from '../actions/data.actions';
-import * as ExportActions from '../actions/export.actions'; // Need export actions too
-import * as FileUploadActions from '../actions/file_upload.actions'; // For file upload actions
+import * as ExportActions from '../actions/export.actions';
+import * as FileUploadActions from '../actions/file_upload.actions';
+import * as UiActions from '../actions/ui.actions';
+import { UiState, initialUiState } from '../state/ui.state';
+import { setCurrentWeekIndex } from '../actions/ui.actions';
 
 export const uiReducer = createReducer(
   // Initial State
@@ -32,8 +33,6 @@ export const uiReducer = createReducer(
       ...state,
       selectedHistoryEntity: { key, entityType },
       currentView: 'history',
-      // Optionally update selectedEntityType to match if needed for consistency
-      // selectedEntityType: type,
     })
   ),
 
@@ -57,7 +56,7 @@ export const uiReducer = createReducer(
     UiActions.setCurrentWeekIndex,
     (state, { index }): UiState => ({
       ...state,
-      currentWeekIndex: index, // Changing week always goes back to list view
+      currentWeekIndex: index,
       currentView: 'list',
     })
   ),
@@ -67,7 +66,7 @@ export const uiReducer = createReducer(
     UiActions.resetNavigation,
     (state): UiState => ({
       ...state,
-      currentWeekIndex: -1, // Go to latest week // Ensure no entity selected
+      currentWeekIndex: -1,
     })
   ),
 
@@ -120,10 +119,10 @@ export const uiReducer = createReducer(
   ),
   on(
     DataActions.processDataSuccess,
-    (state): UiState => ({
+    (state, action): UiState => ({
       ...state,
       currentView: 'list', // Switch view on success
-      currentWeekIndex: -1, // Reset to latest week // Clear selection
+      currentWeekIndex: action.processedData.allWeeks.length - 1, // Go to latest week
       statusMessage: 'Data processed successfully.', // Set success message
       isErrorStatus: false,
     })
@@ -166,5 +165,17 @@ export const uiReducer = createReducer(
       ...state,
       isExportPreviewOpen: false,
     })
-  )
+  ),
+  on(UiActions.setCurrentWeekIndex, (state, action): UiState => {
+    // Avoid state change if index is already correct
+    if (state.currentWeekIndex === action.index) {
+      return state;
+    }
+    return {
+      ...state,
+      currentWeekIndex: action.index,
+      selectedHistoryEntity: null,
+      currentView: 'list',
+    };
+  })
 );
