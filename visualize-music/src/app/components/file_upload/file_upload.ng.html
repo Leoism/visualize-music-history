@@ -30,7 +30,7 @@
       (click)="fileInput.click()"
       [disabled]="isProcessing$ | async"
     >
-      {{ (isProcessing$ | async) ? 'Processing...' : 'Select CSV File' }}
+      {{ (isProcessing$ | async) ? "Processing..." : "Select CSV File" }}
     </button>
   </div>
 
@@ -39,9 +39,9 @@
     class="text-center mt-4 min-h-[1.5em]"
     [ngClass]="{
       'text-red-600 font-medium': isErrorStatus$ | async,
-      'text-gray-600 italic': !(isErrorStatus$ | async)
-      }"
+      'text-gray-600 italic': !(isErrorStatus$ | async),
+    }"
   >
-    {{ (statusMessage$ | async) || 'No file selected.' }}
+    {{ (statusMessage$ | async) || "No file selected." }}
   </p>
 </section>
