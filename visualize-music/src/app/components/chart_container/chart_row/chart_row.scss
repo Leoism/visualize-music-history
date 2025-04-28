@@ -1,0 +1,300 @@
+.chart-row {
+  position: relative;
+  /* Positioning context for the peak badge */
+  display: grid;
+  /* Mobile: Art, Rank/Change, Title/Artist/Stats */
+  grid-template-columns: 40px 3rem 1fr;
+  gap: 0.75rem;
+  /* Gap between main columns */
+  align-items: center;
+  /* Align items vertically */
+  padding: 0;
+  /* Remove padding from row */
+  border-bottom: 1px solid #f3f4f6;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  min-height: 60px;
+}
+
+/* Apply padding to cells within the row */
+.chart-row > div {
+  padding: 0.75rem 0.5rem;
+  /* Default mobile padding */
+}
+
+/* Desktop layout */
+@media (min-width: 640px) {
+  .chart-row {
+    /* sm: Rank, Art, Title, Peak, Change, Weeks */
+    grid-template-columns: 3rem 48px 1fr 4rem 3rem 3.5rem;
+    gap: 0.75rem;
+  }
+
+  .chart-row > div {
+    padding: 0.75rem 1rem;
+    /* Desktop padding */
+  }
+}
+
+.chart-row:last-child {
+  border-bottom: none;
+}
+
+.chart-row:hover {
+  background-color: #f0f9ff;
+}
+
+/* Column 1: Image */
+.list-image-container {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border-radius: 0.25rem;
+  overflow: hidden;
+  background-color: #e5e7eb;
+  padding: 0 !important;
+
+  @media (min-width: 640px) {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+.list-image-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  font-size: 1.25rem;
+  font-weight: bold;
+
+  @media (min-width: 640px) {
+    font-size: 1.5rem;
+  }
+}
+
+.list-image-container img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Column 2: Rank & Change (Mobile) / Rank (Desktop) */
+.list-rank-change-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.list-rank {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #374151;
+  text-align: center;
+  line-height: 1.1;
+}
+
+.list-change {
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+/* Desktop specific Rank/Change positioning */
+@media (min-width: 640px) {
+  .list-rank-change-col {
+    display: block;
+  }
+
+  /* Revert flex */
+  /* Desktop styles for individual rank/change cols */
+  .chart-row > div:nth-child(1) {
+    /* Rank */
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #374151;
+    text-align: center;
+  }
+
+  .chart-row > div:nth-child(5) {
+    /* Change */
+    text-align: center;
+    font-size: 0.9rem;
+    color: #4b5563;
+  }
+}
+
+/* Column 3: Title/Artist/Stats */
+.list-details-stats-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.list-details {
+  margin-left: 0;
+  /* Remove margin */
+}
+
+.list-name {
+  font-weight: 600;
+  color: #111827;
+  display: block;
+  margin-bottom: 0;
+  line-height: 1.3;
+  font-size: 0.95rem;
+}
+
+.list-artist {
+  font-size: 0.85rem;
+  color: #6b7280;
+  display: block;
+  margin-bottom: 0.2rem;
+  line-height: 1.2;
+}
+
+.list-secondary-stats {
+  display: flex;
+  /* Use flex for mobile */
+  justify-content: space-between;
+  /* Distribute items */
+  align-items: center;
+  /* Vertically align items */
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+}
+
+.list-secondary-stats > span {
+  margin-right: 0;
+  /* Remove margin, rely on justify-content */
+}
+
+.list-secondary-stats .stat-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  color: #9ca3af;
+  margin-left: 0.15rem;
+}
+
+/* Hide plays on mobile */
+.list-plays {
+  display: none;
+}
+
+/* Peak indicator specific styles */
+.peak-indicator {
+  margin-left: 0.25rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #f59e0b;
+  background-color: #fffbeb;
+  padding: 0.1rem 0.3rem;
+  border-radius: 0.25rem;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Mobile absolute positioning for the badge */
+.peak-indicator-mobile {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 1;
+  @media (min-width: 640px) {
+    display: hidden;
+  }
+}
+
+/* Desktop layout for Title/Artist/Stats */
+@media (min-width: 640px) {
+  .list-details-stats-col {
+    /* No special styling needed, handled by main grid */
+  }
+
+  .list-details {
+    margin-left: 1rem;
+  }
+
+  .list-name {
+    font-size: 0.9rem;
+  }
+
+  .list-artist {
+    font-size: 0.85rem;
+  }
+
+  .list-secondary-stats {
+    display: none;
+  }
+
+  /* Hide mobile stats block */
+  .list-plays {
+    display: inline;
+    font-size: 0.8rem;
+    color: #a1a1aa;
+  }
+
+  /* Show plays */
+  /* Desktop specific cols */
+  .list-peak-info {
+    display: block;
+    text-align: center;
+    font-size: 0.9rem;
+    color: #4b5563;
+  }
+
+  .list-peak-info span {
+    display: block;
+    font-size: 0.75rem;
+    color: #9ca3af;
+  }
+
+  .list-weeks {
+    display: block;
+    text-align: center;
+    font-size: 0.9rem;
+    color: #4b5563;
+  }
+
+  /* Revert peak indicator positioning for desktop */
+  .peak-indicator {
+    position: static;
+    margin-left: 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  .peak-indicator-mobile {
+    display: none;
+  }
+
+  /* Hide mobile badge on desktop */
+}
+
+/* Change Indicator Styles */
+.list-change span {
+  font-size: 1rem;
+  display: inline-block;
+  width: 1.2em;
+}
+
+.list-change-up {
+  color: #10b981;
+}
+
+.list-change-down {
+  color: #ef4444;
+}
+
+.list-change-same {
+  color: #6b7280;
+}
+
+.list-change-new,
+.list-change-re {
+  color: #a855f7;
+  font-weight: bold;
+  font-size: 0.8rem;
+}

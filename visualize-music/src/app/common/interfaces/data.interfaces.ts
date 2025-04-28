@@ -84,7 +84,7 @@ export interface ChartItem {
   albumMbid: string | null;
   rank: number;
   plays: number;
-  status: RankStatus;
+  rankStatus: RankStatus;
   peak: number | null;
   peakStatus: PeakStatus;
   weeksOnChart: number;

@@ -1,0 +1,65 @@
+@if (item; as chartItem) {
+<div class="chart-row">
+  <div class="list-image-container">
+    @if (getImageProperties(); as imageProperties) { @if (imageProperties.url) {
+    <img
+      [src]="imageProperties.url"
+      [alt]="imageProperties.alt"
+      loading="lazy"
+    />
+    } @else {
+    <div class="list-image-placeholder">{{imageProperties.initials}}</div>
+    }}
+  </div>
+
+  <div class="list-rank-change-col mobile">
+    <div class="list-rank">{{chartItem.rank}}</div>
+    <div class="list-change {{getRankClass(chartItem.rankStatus)}}">
+      {{getRankText(chartItem.rankStatus)}}
+    </div>
+  </div>
+
+  <div class="list-rank desktop">{{chartItem.rank}}</div>
+
+  <div class="list-details-stats-col">
+    <div class="list-details">
+      <span class="list-name">{{chartItem.name}}</span>
+      @if (chartItem.artistName) {
+      <span class="list-artist">{{chartItem.artistName}}</span>
+      }
+      <span class="list-plays hidden sm:inline">
+        Plays: {{chartItem.plays}} @if (getPeakIcon(chartItem.peakStatus); as
+        peakIcon) {
+        <span class="peak-indicator mobile">{{peakIcon}}</span>
+        }
+      </span>
+    </div>
+    <div class="list-secondary-stats sm:hidden">
+      <span
+        >{{chartItem.lastWeekRank ?? '-'}}<span class="stat-label"
+          >LW</span
+        ></span
+      >
+      <span>{{chartItem.peak ?? '-'}}<span class="stat-label">PK</span></span>
+      <span>{{chartItem.weeksOnChart}}<span class="stat-label">WOC</span></span>
+    </div>
+  </div>
+
+  <div class="list-peak-info desktop">
+    {{chartItem.peak ?? '-'}}
+    <span>Peak</span>
+  </div>
+
+  <div class="list-change {{getRankClass(chartItem.rankStatus)}} desktop">
+    {{ getRankText(chartItem.rankStatus) }}
+  </div>
+
+  <div class="list-weeks desktop">{{chartItem.weeksOnChart}}</div>
+
+  @if (getPeakIcon(chartItem.peakStatus); as peakIcon) {
+  <span class="peak-indicator peak-indicator-mobile sm:hidden"
+    >{{peakIcon}}</span
+  >
+  }
+</div>
+}
