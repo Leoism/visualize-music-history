@@ -11,6 +11,7 @@ import { Subject, takeUntil } from 'rxjs';
 import * as ControlsActions from '../../store/actions/controls.actions';
 import { ControlsComponent } from './controls/controls';
 import { Router } from '@angular/router';
+import { selectSelectedEntityType } from '../../store/selectors/ui.selectors';
 
 @Component({
   selector: 'app-home-page',
@@ -22,6 +23,7 @@ export class HomePage {
 
   currentWeekData$ = this.store.select(selectListDataForCurrentWeek);
   currentWeekDate$ = this.store.select(selectCurrentWeekDateString);
+  entityType = this.store.select(selectSelectedEntityType);
 
   @Input()
   set weekId(value: string | undefined) {

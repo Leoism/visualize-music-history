@@ -601,8 +601,8 @@ export class DataEffects {
         details.artistName = key.includes(COMPOSITE_KEY_SEPARATOR)
           ? key.split(COMPOSITE_KEY_SEPARATOR)[0]
           : finalDataMap === processedData.artists
-          ? key
-          : 'Unknown Artist';
+            ? key
+            : 'Unknown Artist';
       if (
         'trackName' in details &&
         !details.trackName &&

@@ -104,3 +104,8 @@ export const closeSettingsPanel = createAction('[UI] Close Settings Panel');
  */
 export const closeExportPreview = createAction('[UI] Close Export Preview');
 // Note: Opening the Export Preview is triggered by ExportActions.generateExportPreviewSuccess
+
+export const updateSelectedEntityType = createAction(
+  '[UI] Update Selected Entity Type',
+  props<{ entityType: EntityType }>()
+);

@@ -177,5 +177,18 @@ export const uiReducer = createReducer(
       selectedHistoryEntity: null,
       currentView: 'list',
     };
+  }),
+
+  on(UiActions.updateSelectedEntityType, (state, action): UiState => {
+    // Avoid state change if entity type is already correct
+    if (state.selectedEntityType === action.entityType) {
+      return state;
+    }
+    return {
+      ...state,
+      selectedEntityType: action.entityType,
+      selectedHistoryEntity: null,
+      currentView: 'list',
+    };
   })
 );

@@ -3,11 +3,6 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Store } from '@ngrx/store';
 import { AppState } from '../../../store/state/app.state';
-import { selectCurrentWeekIndex } from '../../../store/selectors/ui.selectors';
-import {
-  selectAllWeeks,
-  selectCurrentWeekDateString,
-} from '../../../store/selectors/data.selectors';
 import { combineLatestWith, map, withLatestFrom } from 'rxjs';
 import {
   jumpToWeekRequest,
@@ -16,6 +11,14 @@ import {
 } from '../../../store/actions/controls.actions';
 import { formatDateKey } from '../../../common/utils/date_utils';
 import { parseISO } from 'date-fns';
+import { selectExportCount } from '../../../store/selectors/settings.selectors';
+import { selectCurrentWeekIndex } from '../../../store/selectors/ui.selectors';
+import {
+  selectAllWeeks,
+  selectCurrentWeekDateString,
+} from '../../../store/selectors/data.selectors';
+import { updateSelectedEntityType } from '../../../store/actions/ui.actions';
+import { EntityType } from '../../../common/interfaces/data.interfaces';
 
 @Component({
   selector: 'app-chart-controls',
@@ -29,6 +32,7 @@ export class ControlsComponent {
   currentWeekIndex$ = this.store.select(selectCurrentWeekIndex);
   allWeeks$ = this.store.select(selectAllWeeks);
   currentWeekString$ = this.store.select(selectCurrentWeekDateString);
+  exportCount$ = this.store.select(selectExportCount);
 
   minDateRange$ = this.allWeeks$.pipe(
     map((allWeeks) => {
@@ -82,5 +86,15 @@ export class ControlsComponent {
     } else {
       this.store.dispatch(prevWeekRequest());
     }
+  }
+
+  updateEntityType(event: Event) {
+    const selectElement = event.target as HTMLSelectElement;
+    const selectedValue = selectElement.value as EntityType;
+
+    // Dispatch an action to update the entity type in the store
+    this.store.dispatch(
+      updateSelectedEntityType({ entityType: selectedValue })
+    );
   }
 }

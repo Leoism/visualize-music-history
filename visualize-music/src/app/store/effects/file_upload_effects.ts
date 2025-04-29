@@ -83,32 +83,6 @@ export class FileUploadEffects {
 
           // processedData.rawData = results.data; // Store raw data for re-processing
           return observer.next(results.data);
-
-          // Use setTimeout to allow UI update before potentially long processing
-          setTimeout(() => {
-            // try {
-            //   console.log('Calling processListeningData...');
-            //   processListeningData(processedData.rawData); // Initial processing
-            //   console.log('processListeningData finished.');
-            //   updateStatus(`Processed ${file.name}. Chart ready.`);
-            //   uploadSection?.classList.add('hidden');
-            //   chartSection?.classList.remove('hidden');
-            //   currentWeekIndex = -1; // Start at latest week
-            //   selectedHistoryEntity = { key: null, type: null };
-            //   setDateInputRange(); // Set min/max for date picker
-            //   updateChartOrList(); // Initial render
-            //   updateSettingsUI(); // Ensure settings UI matches loaded state
-            // } catch (error) {
-            //   console.error('Error during post-parse processing:', error);
-            //   updateStatus(
-            //     `Error processing data: ${
-            //       error.message || 'Unknown error'
-            //     }. Check console.`,
-            //     true
-            //   );
-            //   resetState(); // Reset on processing error
-            // }
-          }, 10); // Small delay
         },
         error: (error: any) => {
           console.error('PapaParse Error:', error);
