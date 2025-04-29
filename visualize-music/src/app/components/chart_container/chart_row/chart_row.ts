@@ -74,10 +74,10 @@ export class ChartRowComponent {
     let initials = '?';
     if (this.item?.name && this.item.name !== '-') {
       initials = this.item.name.charAt(0).toUpperCase();
-      if (this.item.entityType === 'track' && this.item.artistName) {
+      if (this.item.entityType === 'tracks' && this.item.artistName) {
         initials += this.item.artistName.charAt(0).toUpperCase();
       } else if (
-        this.item.entityType === 'artist' &&
+        this.item.entityType === 'artists' &&
         this.item.name.length > 1
       ) {
         initials = this.item.name.substring(0, 2).toUpperCase();
@@ -87,7 +87,7 @@ export class ChartRowComponent {
     const safeInitials = initials.replace(/['"\\]/g, '\\$&').replace(/\n/g, '');
 
     // Attempt to use Cover Art Archive if it's a track with an album MBID
-    if (this.item?.entityType === 'track' && this.item.albumMbid) {
+    if (this.item?.entityType === 'tracks' && this.item.albumMbid) {
       return {
         url: `https://coverartarchive.org/release/${this.item.albumMbid}/front-250`,
         alt: `Cover Art for ${this.item.name}`,

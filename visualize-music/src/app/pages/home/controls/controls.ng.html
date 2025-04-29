@@ -3,9 +3,13 @@
     <label for="entityType" class="mr-1 text-sm font-medium text-gray-700"
       >Show List:</label
     >
-    <select id="entityType" (change)="updateEntityType($event)">
-      <option value="track" selected>Top Tracks</option>
-      <option value="artist">Top Artists</option>
+    <select
+      id="entityType"
+      (change)="updateEntityType($event)"
+      [value]="selectedEntityType$ | async"
+    >
+      <option value="tracks" selected>Top Tracks</option>
+      <option value="artists">Top Artists</option>
     </select>
   </div>
   <div

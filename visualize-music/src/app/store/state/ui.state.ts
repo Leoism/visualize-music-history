@@ -29,7 +29,7 @@ export interface UiState {
 export const initialUiState: UiState = {
   currentView: 'upload', // Start at the upload screen
   currentWeekIndex: -1, // Default to the latest week when data loads
-  selectedEntityType: 'track', // Default to showing tracks
+  selectedEntityType: 'tracks', // Default to showing tracks
   selectedHistoryEntity: null,
   statusMessage: 'No file selected.', // Initial status message
   isErrorStatus: false,

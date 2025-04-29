@@ -17,9 +17,13 @@ import {
   selectAllWeeks,
   selectCurrentWeekDateString,
 } from '../selectors/data.selectors';
-import { selectCurrentWeekIndex } from '../selectors/ui.selectors';
+import {
+  selectCurrentWeekIndex,
+  selectSelectedEntityType,
+} from '../selectors/ui.selectors';
 import { AppState } from '../state/app.state';
 import { formatDateKey, getWeekStartDate } from '../../common/utils/date_utils';
+import { updateSelectedEntityType } from '../actions/ui.actions';
 
 @Injectable()
 export class ControlsEffects {
@@ -112,11 +116,16 @@ export class ControlsEffects {
     () =>
       this.actions$.pipe(
         ofType(ControlsActions.updateCurrentWeekIndex),
-        withLatestFrom(this.store.select(selectCurrentWeekDateString)),
-        filter(([action, dateString]) => !!dateString),
+        withLatestFrom(
+          this.store.select(selectCurrentWeekDateString),
+          this.store.select(selectSelectedEntityType)
+        ),
+        filter(([action, dateString, selectedEntityType]) => !!dateString),
         distinctUntilChanged(),
-        tap(([action, dateString]) => {
-          this.router.navigate(['/charts', dateString], { replaceUrl: true });
+        tap(([action, dateString, selectedEntityType]) => {
+          this.router.navigate(['/charts', dateString, selectedEntityType], {
+            replaceUrl: true,
+          });
         })
       ),
     { dispatch: false }
@@ -158,5 +167,49 @@ export class ControlsEffects {
         (action) => action.type === ControlsActions.updateCurrentWeekIndex.type
       )
     )
+  );
+
+  syncEntityTypeFromUrl$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(ControlsActions.syncEntityTypeFromUrl),
+      withLatestFrom(this.store.select(selectSelectedEntityType)), // Get current type from store
+      filter(([action, currentStoreType]) => {
+        // Only proceed if the type from URL is different from the store
+        return action.entityType !== currentStoreType;
+      }),
+      map(([action, currentStoreType]) => {
+        console.log(
+          `[UiEffects] Syncing entityType from URL: ${action.entityType}`
+        );
+
+        return updateSelectedEntityType({
+          entityType: action.entityType,
+        });
+      })
+    )
+  );
+
+  updateSelectedEntityType$ = createEffect(
+    () =>
+      this.actions$.pipe(
+        ofType(updateSelectedEntityType),
+        withLatestFrom(
+          this.store.select(selectCurrentWeekDateString),
+          this.store.select(selectSelectedEntityType)
+        ),
+        map(([action, dateString, entityType]) => ({ dateString, entityType })),
+        filter((params) => !!params.dateString && !!params.entityType),
+        distinctUntilChanged(
+          (prev, curr) =>
+            prev.dateString === curr.dateString &&
+            prev.entityType === curr.entityType
+        ),
+        tap(({ dateString, entityType }) => {
+          this.router.navigate(['/charts', dateString, entityType], {
+            replaceUrl: true,
+          });
+        })
+      ),
+    { dispatch: false }
   );
 }

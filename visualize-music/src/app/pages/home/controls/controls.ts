@@ -12,19 +12,23 @@ import {
 import { formatDateKey } from '../../../common/utils/date_utils';
 import { parseISO } from 'date-fns';
 import { selectExportCount } from '../../../store/selectors/settings.selectors';
-import { selectCurrentWeekIndex } from '../../../store/selectors/ui.selectors';
+import {
+  selectCurrentWeekIndex,
+  selectSelectedEntityType,
+} from '../../../store/selectors/ui.selectors';
 import {
   selectAllWeeks,
   selectCurrentWeekDateString,
 } from '../../../store/selectors/data.selectors';
 import { updateSelectedEntityType } from '../../../store/actions/ui.actions';
 import { EntityType } from '../../../common/interfaces/data.interfaces';
+import { FormsModule, NgModel } from '@angular/forms';
 
 @Component({
   selector: 'app-chart-controls',
   templateUrl: './controls.ng.html',
   styleUrls: ['./controls.scss'],
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
 })
@@ -33,6 +37,7 @@ export class ControlsComponent {
   allWeeks$ = this.store.select(selectAllWeeks);
   currentWeekString$ = this.store.select(selectCurrentWeekDateString);
   exportCount$ = this.store.select(selectExportCount);
+  selectedEntityType$ = this.store.select(selectSelectedEntityType);
 
   minDateRange$ = this.allWeeks$.pipe(
     map((allWeeks) => {
@@ -90,6 +95,10 @@ export class ControlsComponent {
 
   updateEntityType(event: Event) {
     const selectElement = event.target as HTMLSelectElement;
+    if (selectElement.value !== 'tracks' && selectElement.value !== 'artists') {
+      console.error('Invalid entity type selected:', selectElement.value);
+      return;
+    }
     const selectedValue = selectElement.value as EntityType;
 
     // Dispatch an action to update the entity type in the store

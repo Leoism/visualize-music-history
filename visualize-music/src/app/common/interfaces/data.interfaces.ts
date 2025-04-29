@@ -32,7 +32,7 @@ export interface HistoryEntry {
 export type EntityKey = string;
 
 /** Type alias for entity types */
-export type EntityType = 'track' | 'artist';
+export type EntityType = 'tracks' | 'artists';
 
 /** Base interface for shared properties between TrackData and ArtistData */
 interface BaseChartEntityData {

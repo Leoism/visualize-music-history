@@ -1,6 +1,6 @@
 <p>Home page</p>
 <p>Week ID: {{ weekId }}</p>
-<p>Entity Type: {{ entityType | async }}</p>
+<p>Entity Type: {{ entityType$ | async }}</p>
 @if (currentWeekData$ | async; as currentWeekData) {
   <app-chart-controls> </app-chart-controls>
   <app-chart-container

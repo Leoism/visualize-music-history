@@ -43,7 +43,7 @@ function getListDataForWeek(
 
     if (rankEntry && rankEntry.rank <= MAX_LIST_ITEMS) {
       // Only include items actually in the top N for that week
-      const isTrack = entityType === 'track';
+      const isTrack = entityType === 'tracks';
       const trackData = data as ProcessedTrackData; // Type assertion
       const artistData = data as ProcessedArtistData; // Type assertion
 
@@ -184,7 +184,7 @@ export const selectListDataForCurrentWeek = createSelector(
       return [];
     }
     const dataMap =
-      entityType === 'track' ? processedData.tracks : processedData.artists;
+      entityType === 'tracks' ? processedData.tracks : processedData.artists;
     // Use helper function for complex logic
     return getListDataForWeek(dataMap, weekKey, entityType);
   }
@@ -202,7 +202,7 @@ export const selectHistoryDataForSelectedEntity = createSelector(
       return null;
     }
     const dataMap =
-      selectedEntity.entityType === 'track'
+      selectedEntity.entityType === 'tracks'
         ? processedData.tracks
         : processedData.artists;
     return dataMap?.get(selectedEntity.key) ?? null;
@@ -237,7 +237,7 @@ export const selectArtistTopSongsForArtistHistory = createSelector(
     // Define a specific interface later if needed
     if (
       !selectedEntity ||
-      selectedEntity.entityType !== 'artist' ||
+      selectedEntity.entityType !== 'artists' ||
       tracksMap.size === 0
     ) {
       return [];

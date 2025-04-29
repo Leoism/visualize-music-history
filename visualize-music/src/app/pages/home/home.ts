@@ -12,6 +12,7 @@ import * as ControlsActions from '../../store/actions/controls.actions';
 import { ControlsComponent } from './controls/controls';
 import { Router } from '@angular/router';
 import { selectSelectedEntityType } from '../../store/selectors/ui.selectors';
+import { EntityType } from '../../common/interfaces/data.interfaces';
 
 @Component({
   selector: 'app-home-page',
@@ -20,10 +21,11 @@ import { selectSelectedEntityType } from '../../store/selectors/ui.selectors';
 })
 export class HomePage {
   private _weekId: string | undefined;
+  private _entityType: string | undefined;
 
   currentWeekData$ = this.store.select(selectListDataForCurrentWeek);
   currentWeekDate$ = this.store.select(selectCurrentWeekDateString);
-  entityType = this.store.select(selectSelectedEntityType);
+  entityType$ = this.store.select(selectSelectedEntityType);
 
   @Input()
   set weekId(value: string | undefined) {
@@ -37,6 +39,25 @@ export class HomePage {
   }
   get weekId(): string | undefined {
     return this._weekId;
+  }
+
+  @Input()
+  set entityType(value: string | undefined) {
+    // Basic validation
+    const validEntityType = (
+      value === 'tracks' || value === 'artists' ? value : 'tracks'
+    ) as EntityType;
+    if (validEntityType && validEntityType !== this._entityType) {
+      console.log('[HomePage] entityType input set:', validEntityType);
+      this._entityType = validEntityType;
+      // Dispatch a new action to sync entity type from URL
+      this.store.dispatch(
+        ControlsActions.syncEntityTypeFromUrl({ entityType: validEntityType })
+      );
+    }
+  }
+  get entityType(): string | undefined {
+    return this._entityType;
   }
 
   constructor(private store: Store<AppState>) {}
