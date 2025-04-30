@@ -40,12 +40,16 @@
               <p class="subtitle">{{ item.artistName }}</p>
             }
           </td>
-          <td>{{ item.plays }}</td>
-          <td [ngStyle]="getExportRowBackgroundColor(item.playPercentChange)">
-            {{ item.playPercentChange | number: "1.0-1" }}%
+          <td class="text-center">{{ item.plays }}</td>
+          <td
+            class="text-center"
+            [ngStyle]="getExportRowBackgroundColor(item.playPercentChange)"
+          >
+            {{ item.playPercentChange > 0 ? "+" : ""
+            }}{{ item.playPercentChange | number: "1.0-1" }}%
           </td>
-          <td>{{ item.peak }}</td>
-          <td>{{ item.weeksOnChart }}</td>
+          <td class="text-center">{{ item.peak }}</td>
+          <td class="text-center">{{ item.weeksOnChart }}</td>
         </tr>
       </ng-template>
     </p-table>
