@@ -19,16 +19,106 @@ p-dialog-footer {
 }
 
 .subtitle {
-  font-size: 0.7rem;
+  font-size: 10px;
   color: #4f545e;
   display: block;
-  line-height: 1;
+  @media (min-width: 640px) {
+    font-size: 0.7rem;
+    line-height: 1;
+  }
 }
 
 .title {
-  font-weight: 600;
+  font-size: 12px;
   color: #111827;
   display: block;
-  line-height: 2;
-  font-size: 0.9rem;
+  font-weight: 450;
+  @media (min-width: 640px) {
+    font-size: 0.9rem;
+    font-weight: 600;
+    line-height: 2;
+  }
+}
+
+.peak-cell {
+ background-color: #fffbe5;
+ font-weight: 500;
+ color: #000;
+}
+
+.mobile-header {
+  font-size: inherit;
+  @media (max-width: 639px) {
+    font-size: 12px !important;
+  }
+}
+
+.mobile-cell {
+  font-size: inherit;
+  @media (max-width: 639px) {
+    font-size: 14px !important;
+  }
+}
+
+.mobile-subtitle {
+  font-size: inherit;
+  @media (max-width: 639px) {
+    font-size: 10px !important;
+  }
+}
+
+$border-size: 2px solid;
+$border-color: #cdcdcd;
+$border-radius: 20%;
+
+.border-wall-left {
+  border-left: $border-size;
+  border-left-color: $border-color;
+}
+
+.border-wall-right {
+  border-right: $border-size;
+  border-right-color: $border-color;
+}
+
+.border-wall-top {
+  border-top: $border-size;
+  border-top-color: $border-color;
+}
+
+.border-wall-bottom {
+  border-bottom: $border-size;
+  border-bottom-color: $border-color;
+}
+
+.border-wall-bottom-right {
+  border-right: $border-size;
+  border-bottom: $border-size;
+  border-bottom-right-radius: $border-radius;
+  border-bottom-color: $border-color;
+  border-right-color: $border-color;
+}
+
+.border-wall-bottom-left {
+  border-left: $border-size;
+  border-bottom: $border-size;
+  border-bottom-left-radius: $border-radius;
+  border-bottom-color: $border-color;
+  border-left-color: $border-color;
+}
+
+.border-wall-top-right {
+  border-right: $border-size;
+  border-top: $border-size;
+  border-top-right-radius: $border-radius;
+  border-top-color: $border-color;
+  border-right-color: $border-color;
+}
+
+.border-wall-top-left {
+  border-left: $border-size;
+  border-top: $border-size;
+  border-top-left-radius: $border-radius;
+  border-top-color: $border-color;
+  border-left-color: $border-color;
 }

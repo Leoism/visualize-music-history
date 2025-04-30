@@ -95,16 +95,16 @@ export class ExportChartComponent {
 
   getLastWeekDiffBackgroundColor(rankStatus: RankStatus): object {
     if (rankStatus === 'NEW') {
-      return { 'background-color': '#fef1b2' };
+      return { 'background-color': '#fffbe5' };
     } else if (rankStatus === 'RE-ENTRY') {
-      return { 'background-color': '#dab2ff' };
+      return { 'background-color': '#f2e5fe' };
     } else if (typeof rankStatus === 'number') {
       if (rankStatus > 0) {
         return {
-          'background-color': '#b3ffe6',
+          'background-color': '#e4fff6',
         };
       } else if (rankStatus < 0) {
-        return { 'background-color': '#ffb3b3' };
+        return { 'background-color': '#ffe6e6' };
       } else {
         // rankStatus === 0
         return {};
