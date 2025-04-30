@@ -25,13 +25,13 @@
   </div>
 
   <div class="text-center mt-5">
-    <button
-      class="button"
-      (click)="fileInput.click()"
+    <p-button
+      [label]="(isProcessing$ | async) ? 'Processing...' : 'Select CSV File'"
+      class="file-upload-button"
+      (onClick)="fileInput.click()"
       [disabled]="isProcessing$ | async"
     >
-      {{ (isProcessing$ | async) ? "Processing..." : "Select CSV File" }}
-    </button>
+    </p-button>
   </div>
 
   <p

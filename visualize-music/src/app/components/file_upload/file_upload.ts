@@ -7,12 +7,13 @@ import * as FileUploadActions from '../../store/actions/file_upload.actions';
 import * as UiSelectors from '../../store/selectors/ui.selectors';
 import * as DataSelectors from '../../store/selectors/data.selectors';
 import { AsyncPipe, CommonModule } from '@angular/common';
+import { ButtonModule } from 'primeng/button';
 
 @Component({
   selector: 'app-file-upload',
   templateUrl: './file_upload.ng.html',
   styleUrls: ['./file_upload.scss'],
-  imports: [AsyncPipe, CommonModule],
+  imports: [AsyncPipe, CommonModule, ButtonModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
 })
