@@ -1,0 +1,53 @@
+<div class="">
+  <p-button (click)="showDialog()" [label]="getExportLabel()" />
+  <p-dialog
+    header="Export Preview"
+    [modal]="true"
+    [(visible)]="visible"
+    [style]="{ width: '95%' }"
+  >
+    <p-table [value]="(currentWeekChartItems$ | async) ?? []" size="small">
+      <ng-template #header>
+        <tr>
+          <th>Rank</th>
+          <th>Art</th>
+          <th>+/-</th>
+          @if (currentEntityType$ | async; as entityType) {
+            <th>{{ entityType == "tracks" ? "Song" : "Artist" }}</th>
+          }
+          <th>Plays</th>
+          <th>% Δ</th>
+          <th>Peak</th>
+          <th>Woc</th>
+        </tr>
+      </ng-template>
+      <ng-template #body let-item>
+        <tr>
+          <td>{{ item.rank }}</td>
+          <td>
+            <img
+              width="64px"
+              height="64px"
+              src="https://www.freeiconspng.com/thumbs/music-note-icon/black-music-note-icon-6.png"
+            />
+          </td>
+          <td [ngStyle]="getLastWeekStyle(item.rankStatus)">
+            {{ getLastWeekDiff(item.rankStatus) }}
+          </td>
+          <td [ngStyle]="getLastWeekDiffBackgroundColor(item.rankStatus)">
+            <p class="title">{{ item.name }}</p>
+            @if (item.artistName) {
+              <p class="subtitle">{{ item.artistName }}</p>
+            }
+          </td>
+          <td>{{ item.plays }}</td>
+          <td [ngStyle]="getExportRowBackgroundColor(item.playPercentChange)">
+            {{ item.playPercentChange | number: "1.0-1" }}%
+          </td>
+          <td>{{ item.peak }}</td>
+          <td>{{ item.weeksOnChart }}</td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </p-dialog>
+</div>

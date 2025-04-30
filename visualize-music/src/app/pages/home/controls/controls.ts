@@ -23,12 +23,13 @@ import {
 import { updateSelectedEntityType } from '../../../store/actions/ui.actions';
 import { EntityType } from '../../../common/interfaces/data.interfaces';
 import { FormsModule, NgModel } from '@angular/forms';
+import { ExportChartComponent } from './export_chart/export_chart';
 
 @Component({
   selector: 'app-chart-controls',
   templateUrl: './controls.ng.html',
   styleUrls: ['./controls.scss'],
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ExportChartComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
 })

@@ -64,9 +64,10 @@
   }
   <div class="w-full sm:w-auto flex items-center justify-center gap-2">
     @if (exportCount$ | async; as exportCount) {
-      <button id="exportImageBtn" class="button">
+      <app-export-chart [exportCount]="exportCount"></app-export-chart>
+      <!-- <button id="exportImageBtn" class="button">
         Export Top {{ exportCount }}
-      </button>
+      </button> -->
     }
     <button id="settingsBtn" class="button">Settings</button>
   </div>
