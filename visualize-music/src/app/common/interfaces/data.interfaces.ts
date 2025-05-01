@@ -46,13 +46,15 @@ interface BaseChartEntityData {
 export interface TrackData extends BaseChartEntityData {
   trackName: string | null;
   artistName: string | null;
-  artistKey: EntityKey | null;
+  artistMbid: EntityKey | null;
   albumMbid: string | null;
+  trackMbid: string | null;
 }
 
 /** Represents processed data for a single artist */
 export interface ArtistData extends BaseChartEntityData {
   artistName: string | null;
+  artistMbid: string | null;
 }
 
 /** Represents processed data for a single track */
@@ -82,6 +84,8 @@ export interface ChartItem {
   name: string;
   artistName: string | null;
   albumMbid: string | null;
+  artistMbid: string | null;
+  trackMbid: string | null;
   rank: number;
   plays: number;
   rankStatus: RankStatus;

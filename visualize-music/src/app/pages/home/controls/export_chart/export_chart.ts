@@ -24,6 +24,10 @@ import {
   EXPORT_ROW_BG_POSITIVE,
 } from '../../../../common/utils/constants';
 
+interface EnrinchedChartItem extends ChartItem {
+  hasHighestWoc: boolean;
+}
+
 @Component({
   selector: 'app-export-chart',
   templateUrl: './export_chart.ng.html',
@@ -34,11 +38,34 @@ import {
 })
 export class ExportChartComponent {
   @Input() exportCount: number = 0;
+  private _currentWeekData: EnrinchedChartItem[] = [];
+  @Input()
+  set currentWeekData(data: ChartItem[]) {
+    const choppedItems = data.slice(0, Math.min(this.exportCount, data.length));
+
+    let highestIdx = -1;
+    let highestWoc = 0;
+    for (let i = 0; i < choppedItems.length; i++) {
+      if (choppedItems[i].weeksOnChart > highestWoc) {
+        highestIdx = i;
+        highestWoc = choppedItems[i].weeksOnChart;
+      }
+    }
+    this._currentWeekData = choppedItems.map((item, index) => {
+      return {
+        ...item,
+        hasHighestWoc: index == highestIdx,
+      };
+    });
+  }
+  get currentWeekData() {
+    return this._currentWeekData;
+  }
   visible: boolean = false;
 
   private readonly store = inject(Store);
+  private erroredAlbums: Set<string> = new Set();
 
-  currentWeekChartItems$ = this.store.select(selectListDataForCurrentWeek);
   currentEntityType$ = this.store.select(selectSelectedEntityType);
 
   newColor = '#ffe97f';
@@ -168,5 +195,43 @@ export class ExportChartComponent {
           b: parseInt(result[3], 16),
         }
       : null;
+  }
+
+  getImageProperties(item: ChartItem): {
+    url?: string;
+    alt?: string;
+    error: (event: Event) => void;
+    initials: string;
+  } {
+    let initials = '?';
+    if (item.name && item.name !== '-') {
+      initials = item.name.charAt(0).toUpperCase();
+      if (item.entityType === 'tracks' && item.artistName) {
+        initials += item.artistName.charAt(0).toUpperCase();
+      } else if (item.entityType === 'artists' && item.name.length > 1) {
+        initials = item.name.substring(0, 2).toUpperCase();
+      }
+    }
+    // Attempt to use Cover Art Archive if it's a track with an album MBID
+    if (
+      item.entityType === 'tracks' &&
+      item.albumMbid &&
+      !this.erroredAlbums.has(item.albumMbid)
+    ) {
+      return {
+        url: `https://coverartarchive.org/release/${item.albumMbid}/front-250`,
+        alt: `Cover Art for ${item.name}`,
+        initials,
+        error: (event: Event) => {
+          console.log(event);
+          this.erroredAlbums.add(item.albumMbid ?? '');
+        },
+      };
+    } else {
+      return {
+        initials,
+        error: (unused) => {},
+      };
+    }
   }
 }

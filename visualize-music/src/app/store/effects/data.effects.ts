@@ -246,6 +246,7 @@ export class DataEffects {
         artistName,
         albumMbid,
         artistKey,
+        trackKey,
         listenDate
       );
       this.updateArtistDetails(
@@ -279,6 +280,7 @@ export class DataEffects {
       artistName,
       albumMbid,
       artistKey,
+      null,
       listenDate
     );
 
@@ -294,7 +296,8 @@ export class DataEffects {
     trackName: string | null,
     artistName: string | null,
     albumMbid: string | null,
-    artistKey: EntityKey | null,
+    artistMbid: string | null,
+    trackMbid: string | null,
     listenDate: Date
   ) {
     this.populateEntityDetails(
@@ -303,7 +306,8 @@ export class DataEffects {
       trackName,
       artistName,
       albumMbid,
-      artistKey,
+      artistMbid,
+      trackMbid,
       listenDate
     );
 
@@ -315,8 +319,9 @@ export class DataEffects {
         detail!,
         trackName,
         albumMbid,
-        artistKey,
-        artistName
+        artistMbid,
+        artistName,
+        trackMbid
       );
     }
   }
@@ -327,12 +332,14 @@ export class DataEffects {
     detail: TrackData,
     trackName: string | null = null,
     albumMbid: string | null = null,
-    artistKey: EntityKey | null = null,
-    artistName: string | null = null
+    artistMbid: EntityKey | null = null,
+    artistName: string | null = null,
+    trackMbid: string | null = null
   ) {
     if (!detail.trackName && trackName) detail.trackName = trackName;
     if (!detail.albumMbid && albumMbid) detail.albumMbid = albumMbid;
-    if (!detail.artistKey && artistKey) detail.artistKey = artistKey;
+    if (!detail.artistMbid && artistMbid) detail.artistMbid = artistMbid;
+    if (!detail.trackMbid && trackMbid) detail.trackMbid = trackMbid;
     detailMap.set(key, detail);
     this.backfillArtistDetails(detailMap, key, detail, artistName);
   }
@@ -353,7 +360,8 @@ export class DataEffects {
     trackName: string | null,
     artistName: string | null,
     albumMbid: string | null,
-    artistKey: EntityKey | null,
+    artistKey: string | null,
+    trackMbid: string | null,
     listenDate: Date
   ) {
     let detail = detailMap.get(key);
@@ -364,22 +372,23 @@ export class DataEffects {
         trackName: trackName, // Null for artists
         artistName: artistName,
         albumMbid: albumMbid, // Null for artists
-        artistKey: artistKey, // Store artist's key on track detail for linking
+        artistMbid: artistKey, // Store artist's key on track detail for linking
+        trackMbid: trackMbid,
         totalPlays: 0,
         firstPlayDate: listenDate,
         lastPlayDate: listenDate,
         history: [],
       };
-      detailMap.set(key, detail);
+      detailMap.set(key, detail!);
     }
 
     // Update stats regardless of whether it was just created or existed
-    detail.totalPlays += 1;
-    if (compareAsc(listenDate, detail.firstPlayDate ?? listenDate) < 0) {
-      detail.firstPlayDate = listenDate;
+    detail!.totalPlays += 1;
+    if (compareAsc(listenDate, detail!.firstPlayDate ?? listenDate) < 0) {
+      detail!.firstPlayDate = listenDate;
     }
-    if (compareAsc(listenDate, detail.lastPlayDate ?? listenDate) > 0) {
-      detail.lastPlayDate = listenDate;
+    if (compareAsc(listenDate, detail!.lastPlayDate ?? listenDate) > 0) {
+      detail!.lastPlayDate = listenDate;
     }
   }
 

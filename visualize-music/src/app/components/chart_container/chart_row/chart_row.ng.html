@@ -13,6 +13,7 @@
           <img
             [src]="imageProperties.url"
             [alt]="imageProperties.alt"
+            (error)="imageProperties.error($event)"
             loading="lazy"
           />
         } @else {

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 
 import { CommonModule } from '@angular/common';
 import { Store } from '@ngrx/store';
@@ -21,7 +21,10 @@ import {
   selectCurrentWeekDateString,
 } from '../../../store/selectors/data.selectors';
 import { updateSelectedEntityType } from '../../../store/actions/ui.actions';
-import { EntityType } from '../../../common/interfaces/data.interfaces';
+import {
+  ChartItem,
+  EntityType,
+} from '../../../common/interfaces/data.interfaces';
 import { FormsModule, NgModel } from '@angular/forms';
 import { ExportChartComponent } from './export_chart/export_chart';
 
@@ -34,6 +37,8 @@ import { ExportChartComponent } from './export_chart/export_chart';
   standalone: true,
 })
 export class ControlsComponent {
+  @Input() currentWeekData: ChartItem[] = [];
+
   currentWeekIndex$ = this.store.select(selectCurrentWeekIndex);
   allWeeks$ = this.store.select(selectAllWeeks);
   currentWeekString$ = this.store.select(selectCurrentWeekDateString);

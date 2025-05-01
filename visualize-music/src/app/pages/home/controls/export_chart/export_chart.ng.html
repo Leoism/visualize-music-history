@@ -6,8 +6,8 @@
     [(visible)]="visible"
     [style]="{ width: '95%', 'max-width': '750px' }"
   >
-    @if (currentWeekChartItems$ | async; as currentWeekChartItems) {
-      <p-table [value]="currentWeekChartItems ?? []" size="small">
+    @if (currentWeekData) {
+      <p-table [value]="currentWeekData" size="small">
         <ng-template #header>
           <tr>
             <th class="mobile-header border-wall-top-left">Rank</th>
@@ -29,7 +29,7 @@
             <!-- Rank -->
             <td
               class="mobile-cell {{
-                currentWeekChartItems.length - 1 == rowIndex
+                currentWeekData.length - 1 == rowIndex
                   ? 'border-wall-bottom-left'
                   : 'border-wall-left'
               }}"
@@ -39,21 +39,35 @@
             <!-- Art -->
             <td
               class="{{
-                currentWeekChartItems.length - 1 == rowIndex
+                currentWeekData.length - 1 == rowIndex
                   ? 'border-wall-bottom'
                   : ''
               }}"
+              [style]="{
+                padding: 0,
+              }"
             >
-              <img
-                width="64px"
-                height="64px"
-                src="https://www.freeiconspng.com/thumbs/music-note-icon/black-music-note-icon-6.png"
-              />
+              @if (getImageProperties(item); as imageProperties) {
+                @if (imageProperties.url) {
+                  <img
+                    width="48px"
+                    height="48px"
+                    [src]="imageProperties.url"
+                    [alt]="imageProperties.alt"
+                    (error)="imageProperties.error($event)"
+                    loading="lazy"
+                  />
+                } @else {
+                  <div class="list-image-placeholder">
+                    {{ imageProperties.initials }}
+                  </div>
+                }
+              }
             </td>
             <!-- Rank Difference -->
             <td
               class="mobile-cell text-center {{
-                currentWeekChartItems.length - 1 == rowIndex
+                currentWeekData.length - 1 == rowIndex
                   ? 'border-wall-bottom'
                   : ''
               }}"
@@ -64,7 +78,7 @@
             <!-- Song/Artist -->
             <td
               class="{{
-                currentWeekChartItems.length - 1 == rowIndex
+                currentWeekData.length - 1 == rowIndex
                   ? 'border-wall-bottom'
                   : ''
               }}"
@@ -78,7 +92,7 @@
             <!-- Plays -->
             <td
               class="text-center mobile-cell {{
-                currentWeekChartItems.length - 1 == rowIndex
+                currentWeekData.length - 1 == rowIndex
                   ? 'border-wall-bottom'
                   : ''
               }}"
@@ -88,7 +102,7 @@
             <!-- % Change -->
             <td
               class="text-center mobile-cell {{
-                currentWeekChartItems.length - 1 == rowIndex
+                currentWeekData.length - 1 == rowIndex
                   ? 'border-wall-bottom'
                   : ''
               }}"
@@ -100,7 +114,7 @@
             <!-- Peak -->
             <td
               class="text-center mobile-cell {{
-                currentWeekChartItems.length - 1 == rowIndex
+                currentWeekData.length - 1 == rowIndex
                   ? 'border-wall-bottom'
                   : ''
               }} {{ item.peak == item.rank ? 'peak-cell' : '' }}"
@@ -110,10 +124,10 @@
             <!-- Weeks on Chart -->
             <td
               class="text-center mobile-cell {{
-                currentWeekChartItems.length - 1 == rowIndex
+                currentWeekData.length - 1 == rowIndex
                   ? 'border-wall-bottom-right'
                   : 'border-wall-right'
-              }}"
+              }} {{ item.hasHighestWoc ? 'highest-woc-cell' : '' }}"
             >
               {{ item.weeksOnChart }}
             </td>

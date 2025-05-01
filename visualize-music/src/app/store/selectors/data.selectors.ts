@@ -64,6 +64,8 @@ function getListDataForWeek(
         weeksOnChart: rankEntry.weeksOnChart,
         playPercentChange: rankEntry.playPercentChange,
         lastWeekRank: rankEntry.lastWeekRank,
+        trackMbid: trackData.details.trackMbid,
+        artistMbid: trackData.details.artistMbid,
       });
     }
   });
@@ -219,8 +221,8 @@ export const selectArtistDetailsForTrackHistory = createSelector(
   ): ArtistData | null => {
     // Ensure the current entity is a track and has an artist key
     const trackData = currentEntityData as ProcessedTrackData; // Type assertion
-    if (trackData?.details?.artistKey) {
-      return artistsMap.get(trackData.details?.artistKey) ?? null;
+    if (trackData?.details?.artistMbid) {
+      return artistsMap.get(trackData.details?.artistMbid) ?? null;
     }
     return null;
   }
@@ -243,11 +245,11 @@ export const selectArtistTopSongsForArtistHistory = createSelector(
       return [];
     }
 
-    const artistKey = selectedEntity.key;
+    const artistMbid = selectedEntity.key;
     const artistTracks: any[] = []; // Use a proper interface like ArtistTopSongItem
 
     tracksMap.forEach((trackData, trackKey) => {
-      if (trackData.artistKey === artistKey) {
+      if (trackData.artistMbid === artistMbid) {
         // Calculate overall peak for this track
         const overallPeak =
           trackData.history?.reduce(

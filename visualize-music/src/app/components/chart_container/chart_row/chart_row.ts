@@ -1,4 +1,9 @@
-import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import {
+  AfterViewInit,
+  ChangeDetectionStrategy,
+  Component,
+  Input,
+} from '@angular/core';
 
 import { AsyncPipe, CommonModule } from '@angular/common';
 import {
@@ -15,10 +20,18 @@ import {
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
 })
-export class ChartRowComponent {
+export class ChartRowComponent implements AfterViewInit {
   @Input() item?: ChartItem;
-  constructor() {}
+  errors = 0;
 
+  ngAfterViewInit() {
+    // console.log(this.item);
+  }
+
+  tryFetchImage() {
+    const albumId = this.item?.albumMbid;
+    const trackId = this.item?.trackMbid;
+  }
   getPeakIcon(peakStatus: PeakStatus) {
     let peakIndicatorText = '';
     if (peakStatus === 'PEAK') peakIndicatorText = '▲ Peak';
@@ -69,6 +82,7 @@ export class ChartRowComponent {
   getImageProperties(): {
     url?: string;
     alt?: string;
+    error: (event: Event) => void;
     initials: string;
   } {
     let initials = '?';
@@ -83,19 +97,24 @@ export class ChartRowComponent {
         initials = this.item.name.substring(0, 2).toUpperCase();
       }
     }
-    // Sanitize initials for use in JS string literal within onerror
-    const safeInitials = initials.replace(/['"\\]/g, '\\$&').replace(/\n/g, '');
-
     // Attempt to use Cover Art Archive if it's a track with an album MBID
-    if (this.item?.entityType === 'tracks' && this.item.albumMbid) {
+    if (
+      this.item?.entityType === 'tracks' &&
+      this.item.albumMbid &&
+      this.errors < 1
+    ) {
       return {
         url: `https://coverartarchive.org/release/${this.item.albumMbid}/front-250`,
         alt: `Cover Art for ${this.item.name}`,
         initials,
+        error: (event: Event) => {
+          this.errors += 1;
+        },
       };
     } else {
       return {
         initials,
+        error: (unused) => {},
       };
     }
   }
