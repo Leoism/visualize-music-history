@@ -6,134 +6,145 @@
     [(visible)]="visible"
     [style]="{ width: '95%', 'max-width': '750px' }"
   >
-    @if (currentWeekData) {
-      <p-table [value]="currentWeekData" size="small">
-        <ng-template #header>
-          <tr>
-            <th class="mobile-header border-wall-top-left">Rank</th>
-            <th class="mobile-header border-wall-top">Art</th>
-            <th class="mobile-header text-center border-wall-top">+/-</th>
-            @if (currentEntityType$ | async; as entityType) {
-              <th class="mobile-header border-wall-top">
-                {{ entityType == "tracks" ? "Song" : "Artist" }}
+    <main class="export-container">
+      @if (currentWeekData) {
+        <h1 class="export-container-title">
+          Your Tops Songs: Week of {{ currentWeekDate | date: "longDate" }}
+        </h1>
+        <p class="export-container-subtitle"></p>
+        <p-table [value]="currentWeekData" size="small">
+          <ng-template #header>
+            <tr>
+              <th class="mobile-header border-wall-top-left">Rank</th>
+              <th class="mobile-header border-wall-top">Art</th>
+              <th class="mobile-header text-center border-wall-top">+/-</th>
+              @if (currentEntityType$ | async; as entityType) {
+                <th class="mobile-header border-wall-top">
+                  {{ entityType == "tracks" ? "Song" : "Artist" }}
+                </th>
+              }
+              <th class="mobile-header text-center border-wall-top">Plays</th>
+              <th class="mobile-header text-center border-wall-top">% Δ</th>
+              <th class="mobile-header text-center border-wall-top">Peak</th>
+              <th class="mobile-header text-center border-wall-top-right">
+                Woc
               </th>
-            }
-            <th class="mobile-header text-center border-wall-top">Plays</th>
-            <th class="mobile-header text-center border-wall-top">% Δ</th>
-            <th class="mobile-header text-center border-wall-top">Peak</th>
-            <th class="mobile-header text-center border-wall-top-right">Woc</th>
-          </tr>
-        </ng-template>
-        <ng-template #body let-item let-rowIndex="rowIndex">
-          <tr>
-            <!-- Rank -->
-            <td
-              class="mobile-cell {{
-                currentWeekData.length - 1 == rowIndex
-                  ? 'border-wall-bottom-left'
-                  : 'border-wall-left'
-              }}"
-            >
-              {{ item.rank }}
-            </td>
-            <!-- Art -->
-            <td
-              class="{{
-                currentWeekData.length - 1 == rowIndex
-                  ? 'border-wall-bottom'
-                  : ''
-              }}"
-              [style]="{
-                padding: 0,
-              }"
-            >
-              @if (getImageProperties(item); as imageProperties) {
-                @if (imageProperties.url) {
-                  <img
-                    width="48px"
-                    height="48px"
-                    [src]="imageProperties.url"
-                    [alt]="imageProperties.alt"
-                    (error)="imageProperties.error($event)"
-                    loading="lazy"
-                  />
-                } @else {
-                  <div class="list-image-placeholder">
-                    {{ imageProperties.initials }}
-                  </div>
+            </tr>
+          </ng-template>
+          <ng-template #body let-item let-rowIndex="rowIndex">
+            <tr>
+              <!-- Rank -->
+              <td
+                class="mobile-cell {{
+                  currentWeekData.length - 1 == rowIndex
+                    ? 'border-wall-bottom-left'
+                    : 'border-wall-left'
+                }}"
+              >
+                {{ item.rank }}
+              </td>
+              <!-- Art -->
+              <td
+                class="{{
+                  currentWeekData.length - 1 == rowIndex
+                    ? 'border-wall-bottom'
+                    : ''
+                }}"
+                [style]="{
+                  padding: 0,
+                }"
+              >
+                @if (getImageProperties(item); as imageProperties) {
+                  @if (imageProperties.url) {
+                    <img
+                      width="48px"
+                      height="48px"
+                      [src]="imageProperties.url"
+                      [alt]="imageProperties.alt"
+                      (error)="imageProperties.error($event)"
+                      loading="lazy"
+                    />
+                  } @else {
+                    <div class="list-image-placeholder">
+                      {{ imageProperties.initials }}
+                    </div>
+                  }
                 }
-              }
-            </td>
-            <!-- Rank Difference -->
-            <td
-              class="mobile-cell text-center {{
-                currentWeekData.length - 1 == rowIndex
-                  ? 'border-wall-bottom'
-                  : ''
-              }}"
-              [ngStyle]="getLastWeekStyle(item.rankStatus)"
-            >
-              {{ getLastWeekDiff(item.rankStatus) }}
-            </td>
-            <!-- Song/Artist -->
-            <td
-              class="{{
-                currentWeekData.length - 1 == rowIndex
-                  ? 'border-wall-bottom'
-                  : ''
-              }}"
-              [ngStyle]="getLastWeekDiffBackgroundColor(item.rankStatus)"
-            >
-              <p class="title">{{ item.name }}</p>
-              @if (item.artistName) {
-                <p class="subtitle">{{ item.artistName }}</p>
-              }
-            </td>
-            <!-- Plays -->
-            <td
-              class="text-center mobile-cell {{
-                currentWeekData.length - 1 == rowIndex
-                  ? 'border-wall-bottom'
-                  : ''
-              }}"
-            >
-              {{ item.plays }}
-            </td>
-            <!-- % Change -->
-            <td
-              class="text-center mobile-cell {{
-                currentWeekData.length - 1 == rowIndex
-                  ? 'border-wall-bottom'
-                  : ''
-              }}"
-              [ngStyle]="getExportRowBackgroundColor(item.playPercentChange)"
-            >
-              {{ item.playPercentChange > 0 ? "+" : ""
-              }}{{ item.playPercentChange | number: "1.0-1" }}%
-            </td>
-            <!-- Peak -->
-            <td
-              class="text-center mobile-cell {{
-                currentWeekData.length - 1 == rowIndex
-                  ? 'border-wall-bottom'
-                  : ''
-              }} {{ item.peak == item.rank ? 'peak-cell' : '' }}"
-            >
-              {{ item.peak }}
-            </td>
-            <!-- Weeks on Chart -->
-            <td
-              class="text-center mobile-cell {{
-                currentWeekData.length - 1 == rowIndex
-                  ? 'border-wall-bottom-right'
-                  : 'border-wall-right'
-              }} {{ item.hasHighestWoc ? 'highest-woc-cell' : '' }}"
-            >
-              {{ item.weeksOnChart }}
-            </td>
-          </tr>
-        </ng-template>
-      </p-table>
-    }
+              </td>
+              <!-- Rank Difference -->
+              <td
+                class="mobile-cell text-center {{
+                  currentWeekData.length - 1 == rowIndex
+                    ? 'border-wall-bottom'
+                    : ''
+                }}"
+                [ngStyle]="getLastWeekStyle(item.rankStatus)"
+              >
+                {{ getLastWeekDiff(item.rankStatus) }}
+              </td>
+              <!-- Song/Artist -->
+              <td
+                class="{{
+                  currentWeekData.length - 1 == rowIndex
+                    ? 'border-wall-bottom'
+                    : ''
+                }}"
+                [ngStyle]="getLastWeekDiffBackgroundColor(item.rankStatus)"
+              >
+                <p class="title">{{ item.name }}</p>
+                @if (item.artistName) {
+                  <p class="subtitle">{{ item.artistName }}</p>
+                }
+              </td>
+              <!-- Plays -->
+              <td
+                class="text-center mobile-cell {{
+                  currentWeekData.length - 1 == rowIndex
+                    ? 'border-wall-bottom'
+                    : ''
+                }}"
+              >
+                {{ item.plays }}
+              </td>
+              <!-- % Change -->
+              <td
+                class="text-center mobile-cell {{
+                  currentWeekData.length - 1 == rowIndex
+                    ? 'border-wall-bottom'
+                    : ''
+                }}"
+                [ngStyle]="getExportRowBackgroundColor(item.playPercentChange)"
+              >
+                {{ item.playPercentChange > 0 ? "+" : ""
+                }}{{ item.playPercentChange | number: "1.0-1" }}%
+              </td>
+              <!-- Peak -->
+              <td
+                class="text-center mobile-cell {{
+                  currentWeekData.length - 1 == rowIndex
+                    ? 'border-wall-bottom'
+                    : ''
+                }} {{ item.peak == item.rank ? 'peak-cell' : '' }}"
+              >
+                {{ item.peak }}
+              </td>
+              <!-- Weeks on Chart -->
+              <td
+                class="text-center mobile-cell {{
+                  currentWeekData.length - 1 == rowIndex
+                    ? 'border-wall-bottom-right'
+                    : 'border-wall-right'
+                }} {{ item.hasHighestWoc ? 'highest-woc-cell' : '' }}"
+              >
+                {{ item.weeksOnChart }}
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      }
+    </main>
+    <ng-template #footer>
+      <p-button class="export-image-button" label="Generate Image"></p-button>
+    </ng-template>
   </p-dialog>
 </div>

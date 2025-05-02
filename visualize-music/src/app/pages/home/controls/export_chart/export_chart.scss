@@ -41,15 +41,43 @@ p-dialog-footer {
 }
 
 .peak-cell {
- background-color: #fffbe5;
- font-weight: 500;
- color: #000;
+  background-color: #fffbe5;
+  font-weight: 500;
+  color: #000;
 }
 
 .highest-woc-cell {
   background-color: #e0efff;
   font-weight: 500;
   color: #000;
+}
+
+.export-container {
+  max-width: 800px; /* Max width for the table container */
+  margin: 2rem auto; /* Center horizontally with top/bottom margin */
+  background: linear-gradient(to bottom, #0e7cea, #1a5693, #16304a);
+  border-radius: 0.5rem; /* Rounded corners for the container */
+  padding: 1.5rem; /* Padding inside the container */
+  box-shadow: 0 2px 3px #404040; /* Subtle shadow */
+}
+
+.export-container-title {
+  font-size: 1.875rem;
+  font-weight: 700;
+  text-align: center;
+  color: #ffffff;
+  margin-bottom: 0.25rem;
+}
+
+.export-container-subtitle {
+  font-size: 1rem;
+  text-align: center;
+  color: #b1b1b1;
+  margin-bottom: 1.5rem;
+}
+
+.export-image-button {
+  padding-top: 1rem;
 }
 
 .list-image-placeholder {
@@ -89,7 +117,7 @@ p-dialog-footer {
 }
 
 $border-size: 2px solid;
-$border-color: #cdcdcd;
+$border-color: #efefef;
 $border-radius: 20%;
 
 .border-wall-left {

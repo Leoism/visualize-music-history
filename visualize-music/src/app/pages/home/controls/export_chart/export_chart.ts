@@ -38,6 +38,14 @@ interface EnrinchedChartItem extends ChartItem {
 })
 export class ExportChartComponent {
   @Input() exportCount: number = 0;
+  private _currentWeekDate: Date = new Date(0);
+  @Input()
+  set currentWeekDate(date: string) {
+    this._currentWeekDate = new Date(date);
+  }
+  get currentWeekDate(): Date {
+    return this._currentWeekDate;
+  }
   private _currentWeekData: EnrinchedChartItem[] = [];
   @Input()
   set currentWeekData(data: ChartItem[]) {
@@ -224,11 +232,16 @@ export class ExportChartComponent {
         initials,
         error: (event: Event) => {
           console.log(event);
-          this.erroredAlbums.add(item.albumMbid ?? '');
+          const img = event.target as HTMLImageElement;
+          img.src = `https://placehold.co/48x50/4b5563/ffffff?text=${initials}`;
+          // console.log(event);
+          // this.erroredAlbums.add(item.albumMbid ?? '');
         },
       };
     } else {
       return {
+        url: `https://placehold.co/48x48/4b5563/ffffff?text=${initials}`,
+        alt: `Placeholder image for ${item.name}`,
         initials,
         error: (unused) => {},
       };

@@ -61,14 +61,15 @@
         Go
       </button>
     </div>
+    <div class="w-full sm:w-auto flex items-center justify-center gap-2">
+      @if (exportCount$ | async; as exportCount) {
+        <app-export-chart
+          [exportCount]="exportCount"
+          [currentWeekData]="currentWeekData"
+          [currentWeekDate]="currentWeek"
+        ></app-export-chart>
+      }
+      <button id="settingsBtn" class="button">Settings</button>
+    </div>
   }
-  <div class="w-full sm:w-auto flex items-center justify-center gap-2">
-    @if (exportCount$ | async; as exportCount) {
-      <app-export-chart
-        [exportCount]="exportCount"
-        [currentWeekData]="currentWeekData"
-      ></app-export-chart>
-    }
-    <button id="settingsBtn" class="button">Settings</button>
-  </div>
 </div>
