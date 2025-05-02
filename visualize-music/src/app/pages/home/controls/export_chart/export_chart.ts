@@ -1,28 +1,37 @@
+import { AsyncPipe, CommonModule } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
+  EventEmitter,
   inject,
   Input,
+  ViewChild,
 } from '@angular/core';
-import { Dialog } from 'primeng/dialog';
+import { Store } from '@ngrx/store';
+import * as htmlToImage from 'html-to-image';
 import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
+import { Dialog } from 'primeng/dialog';
+import { TableModule } from 'primeng/table';
 import {
   ChartItem,
   RankStatus,
 } from '../../../../common/interfaces/data.interfaces';
-import { ChartContainerComponent } from '../../../../components/chart_container/chart_container';
-import { TableModule } from 'primeng/table';
-import { Store } from '@ngrx/store';
-import { selectListDataForCurrentWeek } from '../../../../store/selectors/data.selectors';
-import { AsyncPipe, CommonModule } from '@angular/common';
-import { selectSelectedEntityType } from '../../../../store/selectors/ui.selectors';
 import {
   EXPORT_MAX_PLAY_CHANGE_FACTOR,
   EXPORT_ROW_BG_BASE,
   EXPORT_ROW_BG_NEGATIVE,
   EXPORT_ROW_BG_POSITIVE,
 } from '../../../../common/utils/constants';
+import { selectSelectedEntityType } from '../../../../store/selectors/ui.selectors';
+import { formatDateKey } from '../../../../common/utils/date_utils';
+import { combineLatestWith, map, Subject } from 'rxjs';
+import {
+  selectWindowDuration,
+  selectWindowUnit,
+} from '../../../../store/selectors/settings.selectors';
+import { RankingWindowUnit } from '../../../../common/interfaces/settings.interface';
+import { subDays } from 'date-fns';
 
 interface EnrinchedChartItem extends ChartItem {
   hasHighestWoc: boolean;
@@ -37,6 +46,7 @@ interface EnrinchedChartItem extends ChartItem {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ExportChartComponent {
+  @ViewChild('exportContainer') exportContainer!: any;
   @Input() exportCount: number = 0;
   private _currentWeekDate: Date = new Date(0);
   @Input()
@@ -74,7 +84,34 @@ export class ExportChartComponent {
   private readonly store = inject(Store);
   private erroredAlbums: Set<string> = new Set();
 
+  isExporting$ = new Subject<boolean>();
   currentEntityType$ = this.store.select(selectSelectedEntityType);
+  trackingStartDate$ = this.store.select(selectWindowDuration).pipe(
+    combineLatestWith(this.store.select(selectWindowUnit)),
+    map(
+      ([windowSize, windowUnit]: [number, RankingWindowUnit]):
+        | Date
+        | 'all-time' => {
+        let sizeInDays = 0;
+        const daysInWeek = 7;
+        const weeksInMonth = 4.345;
+        const monthsInYear = 12;
+        if (windowUnit === 'weeks') {
+          sizeInDays = windowSize * daysInWeek;
+        } else if (windowUnit === 'months') {
+          sizeInDays = Math.floor(windowSize * weeksInMonth * daysInWeek);
+        } else if (windowUnit === 'years') {
+          sizeInDays = Math.floor(
+            windowSize * monthsInYear * weeksInMonth * daysInWeek
+          );
+        } else {
+          return 'all-time'; // all-time view
+        }
+
+        return subDays(this._currentWeekDate, sizeInDays);
+      }
+    )
+  );
 
   newColor = '#ffe97f';
   reEntryColor = '#a855f7';
@@ -246,5 +283,23 @@ export class ExportChartComponent {
         error: (unused) => {},
       };
     }
+  }
+
+  exportImage() {
+    const self = this;
+    self.isExporting$.next(true);
+    var link = document.createElement('a');
+    link.download = `top-${this.exportCount}-week-of-${formatDateKey(self.currentWeekDate)}.png`;
+    htmlToImage
+      .toPng(self.exportContainer.nativeElement)
+      .then((dataUrl) => {
+        link.href = dataUrl;
+        link.click();
+        self.isExporting$.next(false);
+        link.remove();
+      })
+      .catch((e) => {
+        self.isExporting$.next(false);
+      });
   }
 }

@@ -1,5 +1,8 @@
 import { createFeatureSelector, createSelector } from '@ngrx/store';
-import { Settings } from '../../common/interfaces/settings.interface';
+import {
+  RankingWindowUnit,
+  Settings,
+} from '../../common/interfaces/settings.interface';
 import { SettingsState } from '../state/settings.state'; // Adjust path if needed
 
 export const selectSettingsState =
@@ -12,7 +15,7 @@ export const selectWindowDuration = createSelector(
 
 export const selectWindowUnit = createSelector(
   selectSettingsState,
-  (state: SettingsState): string => state.settings.windowUnit
+  (state: SettingsState): RankingWindowUnit => state.settings.windowUnit
 );
 export const selectExportCount = createSelector(
   selectSettingsState,

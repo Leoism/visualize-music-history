@@ -6,13 +6,25 @@
     [(visible)]="visible"
     [style]="{ width: '95%', 'max-width': '750px' }"
   >
-    <main class="export-container">
-      @if (currentWeekData) {
+    <main class="export-container" #exportContainer>
+      @if (currentWeekDate) {
         <h1 class="export-container-title">
           Your Tops Songs: Week of {{ currentWeekDate | date: "longDate" }}
         </h1>
-        <p class="export-container-subtitle"></p>
-        <p-table [value]="currentWeekData" size="small">
+        @if (trackingStartDate$ | async; as trackingStartDate) {
+          @if (trackingStartDate == "all-time") {
+            <p class="export-container-subtitle">
+              Data is cumalitive across all-time
+            </p>
+          } @else {
+            <p class="export-container-subtitle">
+              Data spans from
+              {{ trackingStartDate | date: "longDate" }} to
+              {{ currentWeekDate | date: "longDate" }}
+            </p>
+          }
+        }
+        <p-table [value]="currentWeekData" size="small" class="export-table">
           <ng-template #header>
             <tr>
               <th class="mobile-header border-wall-top-left">Rank</th>
@@ -141,10 +153,17 @@
             </tr>
           </ng-template>
         </p-table>
+        <!-- Needed so the image does not cut the bottom-->
+        <br /><br />
       }
     </main>
     <ng-template #footer>
-      <p-button class="export-image-button" label="Generate Image"></p-button>
+      <p-button
+        [disabled]="isExporting$ | async"
+        class="export-image-button"
+        [label]="(isExporting$ | async) ? 'Exporting' : 'Generate Image'"
+        (onClick)="exportImage()"
+      ></p-button>
     </ng-template>
   </p-dialog>
 </div>
