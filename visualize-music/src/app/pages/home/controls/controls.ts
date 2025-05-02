@@ -1,38 +1,46 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { Store } from '@ngrx/store';
-import { AppState } from '../../../store/state/app.state';
-import { combineLatestWith, map, withLatestFrom } from 'rxjs';
+import { parseISO } from 'date-fns';
+import { ButtonModule } from 'primeng/button';
+import { combineLatestWith, map } from 'rxjs';
+import {
+  ChartItem,
+  EntityType,
+} from '../../../common/interfaces/data.interfaces';
+import { formatDateKey } from '../../../common/utils/date_utils';
 import {
   jumpToWeekRequest,
   nextWeekRequest,
   prevWeekRequest,
 } from '../../../store/actions/controls.actions';
-import { formatDateKey } from '../../../common/utils/date_utils';
-import { parseISO } from 'date-fns';
+import { updateSelectedEntityType } from '../../../store/actions/ui.actions';
+import {
+  selectAllWeeks,
+  selectCurrentWeekDateString,
+} from '../../../store/selectors/data.selectors';
 import { selectExportCount } from '../../../store/selectors/settings.selectors';
 import {
   selectCurrentWeekIndex,
   selectSelectedEntityType,
 } from '../../../store/selectors/ui.selectors';
-import {
-  selectAllWeeks,
-  selectCurrentWeekDateString,
-} from '../../../store/selectors/data.selectors';
-import { updateSelectedEntityType } from '../../../store/actions/ui.actions';
-import {
-  ChartItem,
-  EntityType,
-} from '../../../common/interfaces/data.interfaces';
-import { FormsModule, NgModel } from '@angular/forms';
+import { AppState } from '../../../store/state/app.state';
 import { ExportChartComponent } from './export_chart/export_chart';
 
 @Component({
   selector: 'app-chart-controls',
   templateUrl: './controls.ng.html',
   styleUrls: ['./controls.scss'],
-  imports: [CommonModule, FormsModule, ExportChartComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ExportChartComponent,
+    ButtonModule,
+    RouterModule,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
 })

@@ -3,6 +3,7 @@ import { FileUploadPage } from './pages/file_upload/file_upload';
 import { HomePage } from './pages/home/home';
 import { dataExistsRouteGuard } from './route_guards/data_exists_route_guard';
 import { latestChartWeekRouteGuard } from './route_guards/latest_chart_week_route_guard';
+import { SettingsPage } from './pages/settings/settings';
 
 export const routes: Routes = [
   {
@@ -26,7 +27,11 @@ export const routes: Routes = [
     component: HomePage,
     canActivate: [dataExistsRouteGuard],
   },
-
+  {
+    path: 'settings',
+    canActivate: [dataExistsRouteGuard],
+    component: SettingsPage,
+  },
   {
     path: '**',
     redirectTo: '/file-upload',

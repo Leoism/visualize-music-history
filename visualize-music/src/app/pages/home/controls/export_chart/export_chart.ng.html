@@ -9,7 +9,9 @@
     <main class="export-container" #exportContainer>
       @if (currentWeekDate) {
         <h1 class="export-container-title">
-          Your Tops Songs: Week of {{ currentWeekDate | date: "longDate" }}
+          Your Tops
+          {{ (currentEntityType$ | async) == "tracks" ? "Songs" : "Artists" }}:
+          Week of {{ currentWeekDate | date: "longDate" }}
         </h1>
         @if (trackingStartDate$ | async; as trackingStartDate) {
           @if (trackingStartDate == "all-time") {

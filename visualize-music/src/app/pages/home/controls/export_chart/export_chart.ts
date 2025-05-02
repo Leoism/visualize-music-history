@@ -268,11 +268,8 @@ export class ExportChartComponent {
         alt: `Cover Art for ${item.name}`,
         initials,
         error: (event: Event) => {
-          console.log(event);
           const img = event.target as HTMLImageElement;
           img.src = `https://placehold.co/48x50/4b5563/ffffff?text=${initials}`;
-          // console.log(event);
-          // this.erroredAlbums.add(item.albumMbid ?? '');
         },
       };
     } else {

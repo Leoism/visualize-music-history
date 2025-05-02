@@ -1,0 +1,53 @@
+/* Settings page title */
+h1 {
+  text-align: center;
+  color: #333;
+  margin-top: 0; /* Remove default top margin */
+  margin-bottom: 30px;
+  font-weight: 700;
+  font-size: 1.5rem;
+}
+
+/* Styling for each setting group (label + input) */
+.form-group {
+  display: flex;
+  flex-direction: column; /* Stack label and input vertically by default */
+  gap: 8px; /* Space between label and input */
+  padding: 0.5rem 0;
+}
+
+/* Visual separator line */
+.separator {
+  border: none; /* Remove default border */
+  border-top: 1px solid #eee; /* Light grey top border */
+  margin: 5px 0; /* Reduced margin around the separator */
+}
+
+/* Container for action buttons */
+.form-actions {
+  display: flex;
+  justify-content: flex-end; /* Align buttons to the right */
+  gap: 10px; /* Space between buttons */
+  margin-top: 20px; /* Space above the buttons */
+}
+
+/* Responsive adjustments for wider screens */
+@media (min-width: 500px) {
+  .form-group {
+    flex-direction: row; /* Align label and input horizontally */
+    align-items: center; /* Vertically align items in the middle */
+  }
+
+  .form-group label {
+    flex-basis: 200px; /* Give labels a fixed base width */
+    flex-shrink: 0; /* Prevent labels from shrinking */
+    text-align: right; /* Right-align label text */
+    margin-right: 15px; /* Add space between label and input */
+  }
+
+  .form-group input[type="number"],
+  .form-group select {
+    flex-grow: 1; /* Allow input/select to take remaining space */
+    width: auto; /* Override width: 100% */
+  }
+}
