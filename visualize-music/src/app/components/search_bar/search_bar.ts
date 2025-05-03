@@ -11,6 +11,7 @@ import { AutoComplete, AutoCompleteCompleteEvent } from 'primeng/autocomplete';
 import { EntityKey, EntityType } from '../../common/interfaces/data.interfaces';
 import { selectProcessedData } from '../../store/selectors/data.selectors';
 import { FormsModule } from '@angular/forms';
+import { Button } from 'primeng/button';
 
 interface SearchSuggestion {
   key: EntityKey;
@@ -22,7 +23,7 @@ interface SearchSuggestion {
   selector: 'app-search-bar',
   templateUrl: './search_bar.ng.html',
   styleUrls: ['./search_bar.scss'],
-  imports: [CommonModule, AutoComplete, FormsModule],
+  imports: [CommonModule, AutoComplete, FormsModule, Button],
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
 })

@@ -1,23 +1,26 @@
-<p-autocomplete
-  [(ngModel)]="selectedItem"
-  [virtualScroll]="true"
-  [suggestions]="filteredItems"
-  [virtualScrollItemSize]="34"
-  (completeMethod)="handleSearchInput($event)"
-  optionLabel="display"
-  [dropdown]="true"
-  size="large"
-  [fluid]="true"
->
-  <ng-template let-item #item>
-    <div class="flex items-center gap-2">
-      <div class="suggestion-type">
-        {{ item.type === "artists" ? "[Artist]" : "[Track]" }}
+<div class="flex items-center gap-2 search-container">
+  <p-autocomplete
+    class="search-bar"
+    [(ngModel)]="selectedItem"
+    [virtualScroll]="true"
+    [suggestions]="filteredItems"
+    [virtualScrollItemSize]="34"
+    (completeMethod)="handleSearchInput($event)"
+    optionLabel="display"
+    size="large"
+    [fluid]="true"
+  >
+    <ng-template let-item #item>
+      <div class="flex items-center gap-2">
+        <div class="suggestion-type">
+          {{ item.type === "artists" ? "[Artist]" : "[Track]" }}
+        </div>
+        <div>{{ item.display }}</div>
+        @if (item.type === "tracks") {
+          <div class="suggestion-artist">- {{ item.artist }}</div>
+        }
       </div>
-      <div>{{ item.display }}</div>
-      @if (item.type === "tracks") {
-        <div class="suggestion-artist">- {{ item.artist }}</div>
-      }
-    </div>
-  </ng-template>
-</p-autocomplete>
+    </ng-template>
+  </p-autocomplete>
+  <p-button [icon]="'pi pi-search'"></p-button>
+</div>

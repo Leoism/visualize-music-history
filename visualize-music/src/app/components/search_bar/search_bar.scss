@@ -10,3 +10,17 @@
   font-size: 0.85rem;
   margin-left: 0.3rem;
 }
+
+.search-container {
+  width: 100%;
+  @media (min-width: 640px) {
+    width: 75%;
+    align-items: center;
+    margin: 0 auto;
+    max-width: 50rem;
+  }
+}
+
+.search-bar {
+  width: 100%;
+}
