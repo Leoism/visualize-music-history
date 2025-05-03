@@ -1,36 +1,117 @@
-/* Controls Area - Responsive */
-.controls-area {
-  display: grid;
-  grid-template-columns: 1fr;
-  /* Stack vertically by default */
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #e5e7eb;
-}
+// Main container for all controls
+.page-controls {
+  display: flex; // Use flexbox for layout
+  flex-wrap: wrap; // Allow items to wrap onto the next line on smaller screens
+  align-items: center; // Vertically align items in the center
+  gap: 1.5rem; // Add space between control groups
+  padding: 1rem; // Add some padding around the controls
+  border-bottom: 1px solid #eee; // Optional: visual separator
 
-/* Adjust layout for medium screens and up */
-@media (min-width: 768px) {
-  .controls-area {
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    /* More flexible grid */
-    justify-content: center;
-    align-items: center;
-    gap: 0.75rem 1.5rem;
+  // Styling for individual groups of controls
+  .control-group {
+    display: flex;
+    align-items: center; // Align items within the group vertically
+    gap: 0.5rem; // Space between elements within a group (label, input, button)
+
+    label {
+      flex-shrink: 0;
+      white-space: nowrap; // Prevent label text from wrapping
+    }
+
+    .entity-type-select {
+      max-width: 16rem; // Give date/select inputs a minimum width
+    }
   }
 
-  /* Group week nav and jump together */
-  #weekNavContainer,
-  #jumpToWeekContainer {
-    justify-content: center;
+  // Specific group adjustments if needed
+  .week-nav-group {
+    // Example: ensure week label has some space
+    .week-label {
+      margin: 0 0.25rem; // Add small horizontal margin around the week text
+      white-space: nowrap;
+      flex-grow: 1;
+      text-align: center;
+    }
+  }
+
+  .action-buttons {
+    margin-left: auto; // Push action buttons (Export, Settings) to the right on wider screens
+  }
+
+  // --- Responsive adjustments for mobile ---
+  @media (max-width: 640px) {
+    // Target tablets and phones
+    flex-direction: column; // Stack groups vertically
+    align-items: stretch; // Stretch groups to fill container width
+    gap: 1rem; // Adjust gap for vertical stacking
+
+    .control-group {
+      // On mobile, maybe allow items within a group to wrap
+      flex-wrap: nowrap;
+      justify-content: flex-start; // Align items to the start
+      justify-items: baseline;
+      // Make inputs/selects take more width on mobile if desired
+      .entity-type-select {
+        max-width: 100%;
+        width: 100%; // Option: make them full width within their container
+        flex-grow: 1; // Allow them to grow to fill available space
+      }
+    }
+
+    .action-buttons {
+      margin-left: 0; // Reset margin override
+      justify-content: flex-start; // Align action buttons to the start
+      // Or center them:
+      // justify-content: center;
+    }
+
+    // Ensure prev/next buttons are reasonably sized
+    .week-nav-group {
+      button {
+        // Potentially add min-width or adjust padding for touch targets
+      }
+    }
+  }
+
+  @media (max-width: 480px) {
+    // Smaller mobile screens
+    .control-group {
+      // Further adjustments if needed, e.g., stacking label above input
+      label {
+        // display: block; // Make label take full width
+        // width: 100%;
+        // margin-bottom: 0.25rem;
+      }
+    }
   }
 }
 
-/* Ensure buttons don't take full width unless needed */
-.controls-area > div {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: center;
-  gap: 0.5rem;
-}
+// --- Example HTML Structure this SCSS assumes ---
+/*
+<header class="page-controls">
+    <div class="control-group show-list-group">
+        <label for="show-list">Show List:</label>
+        <select id="show-list">
+            <option>Top Tracks</option>
+            // Other options...
+        </select>
+    </div>
+
+    <div class="control-group week-nav-group">
+        <button class="prev-week">&lt; Prev</button>
+        <span class="week-label">Week: 2025-03-16</span>
+        <button class="next-week">Next &gt;</button>
+    </div>
+
+    <div class="control-group jump-to-group">
+        <label for="jump-date">Jump to:</label>
+        <input type="date" id="jump-date" value="2025-03-16">
+        <button class="go-button">Go</button>
+    </div>
+
+    <div class="control-group action-buttons">
+        <button class="export-button">Export Top 15</button>
+        <button class="settings-button">Settings</button>
+    </div>
+</header>
+*/

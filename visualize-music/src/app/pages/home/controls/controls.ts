@@ -1,4 +1,10 @@
-import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  inject,
+  Input,
+} from '@angular/core';
 
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -6,6 +12,7 @@ import { RouterModule } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { parseISO } from 'date-fns';
 import { ButtonModule } from 'primeng/button';
+import { DatePickerModule } from 'primeng/datepicker';
 import { combineLatestWith, map } from 'rxjs';
 import {
   ChartItem,
@@ -40,11 +47,15 @@ import { ExportChartComponent } from './export_chart/export_chart';
     ExportChartComponent,
     ButtonModule,
     RouterModule,
+    DatePickerModule,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
 })
 export class ControlsComponent {
+  private readonly store = inject(Store<AppState>);
+  private readonly destroyRef = inject(DestroyRef);
+
   @Input() currentWeekData: ChartItem[] = [];
 
   currentWeekIndex$ = this.store.select(selectCurrentWeekIndex);
@@ -55,13 +66,13 @@ export class ControlsComponent {
 
   minDateRange$ = this.allWeeks$.pipe(
     map((allWeeks) => {
-      return formatDateKey(allWeeks[0]);
+      return allWeeks[0];
     })
   );
 
   maxDateRange$ = this.allWeeks$.pipe(
     map((allWeeks) => {
-      return formatDateKey(allWeeks[allWeeks.length - 1]);
+      return allWeeks[allWeeks.length - 1];
     })
   );
 
@@ -80,13 +91,22 @@ export class ControlsComponent {
     })
   );
 
-  private calendarSelectedDate: string = '';
+  calendarSelectedDate: Date = new Date();
 
-  constructor(private store: Store<AppState>) {}
+  constructor() {
+    const sub = this.currentWeekString$.subscribe((currentWeek) => {
+      if (currentWeek) {
+        this.calendarSelectedDate = this.toDate(currentWeek);
+      }
+    });
+    this.destroyRef.onDestroy(() => {
+      sub.unsubscribe();
+    });
+  }
 
   updateCalendarSelection(event: Event) {
     const input = event.target as HTMLInputElement;
-    this.calendarSelectedDate = input.value;
+    this.calendarSelectedDate = this.toDate(input.value);
   }
 
   handleJumpToWeek() {
@@ -94,9 +114,7 @@ export class ControlsComponent {
       return;
     }
 
-    const utcDate = parseISO(this.calendarSelectedDate + 'T00:00:00');
-
-    this.store.dispatch(jumpToWeekRequest({ date: utcDate }));
+    this.store.dispatch(jumpToWeekRequest({ date: this.calendarSelectedDate }));
   }
 
   navigateWeek(direction: 'next' | 'prev') {
@@ -119,5 +137,10 @@ export class ControlsComponent {
     this.store.dispatch(
       updateSelectedEntityType({ entityType: selectedValue })
     );
+  }
+
+  toDate(date: string) {
+    console.log(parseISO(date + 'T00:00:00'));
+    return parseISO(date + 'T00:00:00');
   }
 }

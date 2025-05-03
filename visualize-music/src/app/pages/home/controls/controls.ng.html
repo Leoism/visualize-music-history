@@ -1,10 +1,8 @@
-<div class="controls-area">
-  <div class="w-full sm:w-auto">
-    <label for="entityType" class="mr-1 text-sm font-medium text-gray-700"
-      >Show List:</label
-    >
+<div class="page-controls">
+  <div class="control-group">
+    <label for="entityType">Show List:</label>
     <select
-      id="entityType"
+      class="entity-type-select"
       (change)="updateEntityType($event)"
       [value]="selectedEntityType$ | async"
     >
@@ -12,56 +10,37 @@
       <option value="artists">Top Artists</option>
     </select>
   </div>
-  <div
-    id="weekNavContainer"
-    class="w-full sm:w-auto flex items-center justify-center"
-  >
-    <button
-      class="button"
+  <div class="control-group week-nav-group">
+    <p-button
+      label="< Prev"
       [disabled]="!(canGoBackward$ | async)"
-      (click)="navigateWeek('prev')"
-    >
-      &lt; Prev
-    </button>
+      (onClick)="navigateWeek('prev')"
+    />
     @if (currentWeekString$ | async; as currentWeek) {
-      <span
-        id="currentWeekDisplay"
-        class="mx-2 text-sm text-gray-700 whitespace-nowrap"
-        >Week: {{ currentWeek }}</span
-      >
+      <span class="week-label">Week: {{ currentWeek }}</span>
     }
-    <button
-      class="button"
+    <p-button
+      label="Next >"
       [disabled]="!(canGoForward$ | async)"
-      (click)="navigateWeek('next')"
-    >
-      Next &gt;
-    </button>
+      (onClick)="navigateWeek('next')"
+    />
   </div>
   @if (currentWeekString$ | async; as currentWeek) {
-    <div
-      id="jumpToWeekContainer"
-      class="w-full sm:w-auto flex items-center justify-center"
-    >
-      <label for="weekJumpInput" class="mr-1 text-sm font-medium text-gray-700"
-        >Jump to:</label
-      >
-      <input
-        type="date"
-        [value]="currentWeek"
-        [min]="minDateRange$ | async"
-        [max]="maxDateRange$ | async"
-        (change)="updateCalendarSelection($event)"
+    <div class="control-group jump-to-group">
+      <label for="weekJumpInput">Jump to:</label>
+      <p-datepicker
+        [(ngModel)]="calendarSelectedDate"
+        [iconDisplay]="'input'"
+        [showIcon]="true"
+        dateFormat="yy-mm-dd"
+        inputId="icondisplay"
+        [minDate]="minDateRange$ | async"
+        [maxDate]="maxDateRange$ | async"
       />
-      <button
-        id="jumpToWeekBtn"
-        class="button ml-1"
-        (click)="handleJumpToWeek()"
-      >
-        Go
-      </button>
+
+      <p-button label="Go" (onClick)="handleJumpToWeek()" />
     </div>
-    <div class="w-full sm:w-auto flex items-center justify-center gap-2">
+    <div class="control-group action-buttons">
       @if (exportCount$ | async; as exportCount) {
         <app-export-chart
           [exportCount]="exportCount"
