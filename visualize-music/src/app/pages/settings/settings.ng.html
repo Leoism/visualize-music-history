@@ -9,20 +9,26 @@
   <h1>Settings</h1>
   <form [formGroup]="formGroup" (ngSubmit)="applySettings()">
     @if (currentSettings$ | async; as currentSettings) {
-      <div class="form-group">
-        <label for="sliding-window-duration">Sliding Window Duration:</label>
-        <p-inputnumber
-          formControlName="windowDuration"
-          [maxFractionDigits]="0"
-          [(ngModel)]="currentSettings.windowDuration"
-        ></p-inputnumber>
-      </div>
+      @if (windowUnitFormControl.value != "all-time") {
+        <div class="form-group">
+          <label for="sliding-window-duration">Sliding Window Duration:</label>
+          <p-inputnumber
+            [class]="
+              windowDurationFormControl.errors ? 'ng-invalid ng-dirty' : ''
+            "
+            formControlName="windowDuration"
+            [maxFractionDigits]="0"
+            [(ngModel)]="currentSettings.windowDuration"
+          ></p-inputnumber>
+        </div>
+      }
       <div class="form-group">
         <label for="sliding-window-unit">Sliding Window Unit:</label>
         <p-select
           formControlName="windowUnit"
           [options]="windowUnitOptions"
           [(ngModel)]="currentSettings.windowUnit"
+          (onChange)="onWindowUnitChange($event)"
         />
       </div>
       <hr class="separator" />
