@@ -1,23 +1,27 @@
+import { AsyncPipe } from '@angular/common';
 import { Component, inject, Input } from '@angular/core';
 import { Store } from '@ngrx/store';
-import { ChartContainerComponent } from '../../components/chart_container/chart_container';
-import {
-  selectListDataForCurrentWeek,
-  selectCurrentWeekDateString,
-} from '../../store/selectors/data.selectors';
-import { AppState } from '../../store/state/app.state';
-import { AsyncPipe } from '@angular/common';
-import { Subject, takeUntil } from 'rxjs';
-import * as ControlsActions from '../../store/actions/controls.actions';
-import { ControlsComponent } from './controls/controls';
-import { Router } from '@angular/router';
-import { selectSelectedEntityType } from '../../store/selectors/ui.selectors';
-import { EntityType } from '../../common/interfaces/data.interfaces';
 import { MessageService } from 'primeng/api';
+import { EntityType } from '../../common/interfaces/data.interfaces';
+import { ChartContainerComponent } from '../../components/chart_container/chart_container';
+import { SearchBarComponent } from '../../components/search_bar/search_bar';
+import * as ControlsActions from '../../store/actions/controls.actions';
+import {
+  selectCurrentWeekDateString,
+  selectListDataForCurrentWeek,
+} from '../../store/selectors/data.selectors';
+import { selectSelectedEntityType } from '../../store/selectors/ui.selectors';
+import { AppState } from '../../store/state/app.state';
+import { ControlsComponent } from './controls/controls';
 
 @Component({
   selector: 'app-home-page',
-  imports: [ChartContainerComponent, AsyncPipe, ControlsComponent],
+  imports: [
+    ChartContainerComponent,
+    AsyncPipe,
+    ControlsComponent,
+    SearchBarComponent,
+  ],
   templateUrl: './home.ng.html',
 })
 export class HomePage {

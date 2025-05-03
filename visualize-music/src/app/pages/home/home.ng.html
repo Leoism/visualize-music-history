@@ -1,4 +1,5 @@
 @if (currentWeekData$ | async; as currentWeekData) {
+  <app-search-bar></app-search-bar>
   <app-chart-controls [currentWeekData]="currentWeekData"> </app-chart-controls>
   <app-chart-container
     [items]="currentWeekData"

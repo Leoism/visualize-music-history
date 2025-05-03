@@ -1,0 +1,11 @@
+<p-autocomplete
+  [(ngModel)]="selectedItem"
+  [virtualScroll]="true"
+  [suggestions]="filteredItems"
+  [virtualScrollItemSize]="34"
+  (completeMethod)="handleSearchInput($event)"
+  optionLabel="display"
+  [dropdown]="true"
+  size="large"
+  [fluid]="true"
+/>
