@@ -7,7 +7,7 @@
   }"
 >
   <h1>Settings</h1>
-  <form [formGroup]="formGroup">
+  <form [formGroup]="formGroup" (ngSubmit)="applySettings()">
     @if (currentSettings$ | async; as currentSettings) {
       <div class="form-group">
         <label for="sliding-window-duration">Sliding Window Duration:</label>
@@ -45,8 +45,13 @@
         }"
         label="Back"
         (onClick)="goBack()"
+        [disabled]="isProcessing"
       ></p-button>
-      <p-button label="Apply"></p-button>
+      <p-button
+        label="Apply"
+        type="submit"
+        [disabled]="isProcessing"
+      ></p-button>
     </div>
   </form>
 </p-card>

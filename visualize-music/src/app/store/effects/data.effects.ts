@@ -44,6 +44,7 @@ import {
   subWeeks,
 } from 'date-fns';
 import { Router } from '@angular/router';
+import { applySettings } from '../actions/settings.actions';
 
 @Injectable()
 export class DataEffects {
@@ -55,7 +56,7 @@ export class DataEffects {
 
   processDataStart$ = createEffect(() =>
     this.actions$.pipe(
-      ofType(DataActions.processDataStart),
+      ofType(DataActions.processDataStart, applySettings),
       withLatestFrom(
         this.store.select(selectRawData),
         this.store.select(selectSettings)
@@ -442,7 +443,8 @@ export class DataEffects {
         windowArtistPlays = new Map(cumulativeArtistPlays); // Copy map
       } else {
         // --- Sliding Window Calculation ---
-        for (let i = 0; i < settings.slidingWindowWeeks; i++) {
+        // slidingWindowsWeeks cannot be null when isAllTimeMode is false
+        for (let i = 0; i < settings.slidingWindowWeeks!; i++) {
           const weekInWindowDate = subWeeks(currentWeekDate, i);
           const weekInWindowKey = formatDateKey(weekInWindowDate);
           if (!weekInWindowKey) continue; // Skip if no data

@@ -32,6 +32,7 @@ import {
 } from '../../../../store/selectors/settings.selectors';
 import { RankingWindowUnit } from '../../../../common/interfaces/settings.interface';
 import { subDays } from 'date-fns';
+import { calculateDaysFromUnitDuration } from '../../../../common/utils/utils';
 
 interface EnrinchedChartItem extends ChartItem {
   hasHighestWoc: boolean;
@@ -92,20 +93,10 @@ export class ExportChartComponent {
       ([windowSize, windowUnit]: [number, RankingWindowUnit]):
         | Date
         | 'all-time' => {
-        let sizeInDays = 0;
-        const daysInWeek = 7;
-        const weeksInMonth = 4.345;
-        const monthsInYear = 12;
-        if (windowUnit === 'weeks') {
-          sizeInDays = windowSize * daysInWeek;
-        } else if (windowUnit === 'months') {
-          sizeInDays = Math.floor(windowSize * weeksInMonth * daysInWeek);
-        } else if (windowUnit === 'years') {
-          sizeInDays = Math.floor(
-            windowSize * monthsInYear * weeksInMonth * daysInWeek
-          );
-        } else {
-          return 'all-time'; // all-time view
+        let sizeInDays = calculateDaysFromUnitDuration(windowUnit, windowSize);
+
+        if (sizeInDays === null) {
+          return 'all-time';
         }
 
         return subDays(this._currentWeekDate, sizeInDays);

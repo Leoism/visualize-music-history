@@ -17,6 +17,7 @@ import { provideAnimationsAsync } from '@angular/platform-browser/animations/asy
 import { providePrimeNG } from 'primeng/config';
 import Aura from '@primeng/themes/aura';
 import { definePreset } from '@primeng/themes';
+import { MessageService } from 'primeng/api';
 
 const MyPreset = definePreset(Aura, {
   semantic: {
@@ -38,6 +39,7 @@ const MyPreset = definePreset(Aura, {
 
 export const appConfig: ApplicationConfig = {
   providers: [
+    MessageService,
     provideRouter(routes, withComponentInputBinding(), withHashLocation()),
     provideStore(),
     importProvidersFrom(

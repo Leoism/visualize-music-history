@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, inject, Input } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { ChartContainerComponent } from '../../components/chart_container/chart_container';
 import {
@@ -13,6 +13,7 @@ import { ControlsComponent } from './controls/controls';
 import { Router } from '@angular/router';
 import { selectSelectedEntityType } from '../../store/selectors/ui.selectors';
 import { EntityType } from '../../common/interfaces/data.interfaces';
+import { MessageService } from 'primeng/api';
 
 @Component({
   selector: 'app-home-page',
@@ -20,6 +21,9 @@ import { EntityType } from '../../common/interfaces/data.interfaces';
   templateUrl: './home.ng.html',
 })
 export class HomePage {
+  private readonly unused = inject(MessageService);
+  private readonly store = inject(Store<AppState>);
+
   private _weekId: string | undefined;
   private _entityType: string | undefined;
 
@@ -59,6 +63,4 @@ export class HomePage {
   get entityType(): string | undefined {
     return this._entityType;
   }
-
-  constructor(private store: Store<AppState>) {}
 }
