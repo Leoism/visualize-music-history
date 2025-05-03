@@ -1,14 +1,16 @@
 <div class="page-controls">
   <div class="control-group">
     <label for="entityType">Show List:</label>
-    <select
+    <p-select
       class="entity-type-select"
-      (change)="updateEntityType($event)"
-      [value]="selectedEntityType$ | async"
+      [checkmark]="true"
+      [options]="options"
+      (onChange)="updateEntityType($event)"
+      [(ngModel)]="selectedEntityType"
     >
       <option value="tracks" selected>Top Tracks</option>
       <option value="artists">Top Artists</option>
-    </select>
+    </p-select>
   </div>
   <div class="control-group week-nav-group">
     <p-button

@@ -1,3 +1,4 @@
+import { CommonModule } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -5,20 +6,18 @@ import {
   inject,
   Input,
 } from '@angular/core';
-
-import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { parseISO } from 'date-fns';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
+import { SelectChangeEvent, SelectModule } from 'primeng/select';
 import { combineLatestWith, map } from 'rxjs';
 import {
   ChartItem,
   EntityType,
 } from '../../../common/interfaces/data.interfaces';
-import { formatDateKey } from '../../../common/utils/date_utils';
 import {
   jumpToWeekRequest,
   nextWeekRequest,
@@ -37,6 +36,10 @@ import {
 import { AppState } from '../../../store/state/app.state';
 import { ExportChartComponent } from './export_chart/export_chart';
 
+interface EntitySelectOption {
+  label: string;
+  value: EntityType;
+}
 @Component({
   selector: 'app-chart-controls',
   templateUrl: './controls.ng.html',
@@ -48,6 +51,7 @@ import { ExportChartComponent } from './export_chart/export_chart';
     ButtonModule,
     RouterModule,
     DatePickerModule,
+    SelectModule,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
@@ -55,6 +59,11 @@ import { ExportChartComponent } from './export_chart/export_chart';
 export class ControlsComponent {
   private readonly store = inject(Store<AppState>);
   private readonly destroyRef = inject(DestroyRef);
+
+  readonly options: EntitySelectOption[] = [
+    { label: 'Artists', value: 'artists' },
+    { label: 'Tracks', value: 'tracks' },
+  ];
 
   @Input() currentWeekData: ChartItem[] = [];
 
@@ -92,6 +101,7 @@ export class ControlsComponent {
   );
 
   calendarSelectedDate: Date = new Date();
+  selectedEntityType: EntityType = 'tracks';
 
   constructor() {
     const sub = this.currentWeekString$.subscribe((currentWeek) => {
@@ -99,8 +109,14 @@ export class ControlsComponent {
         this.calendarSelectedDate = this.toDate(currentWeek);
       }
     });
+    const sub2 = this.selectedEntityType$.subscribe((entityType) => {
+      if (entityType) {
+        this.selectedEntityType = entityType;
+      }
+    });
     this.destroyRef.onDestroy(() => {
       sub.unsubscribe();
+      sub2.unsubscribe();
     });
   }
 
@@ -125,13 +141,13 @@ export class ControlsComponent {
     }
   }
 
-  updateEntityType(event: Event) {
-    const selectElement = event.target as HTMLSelectElement;
-    if (selectElement.value !== 'tracks' && selectElement.value !== 'artists') {
-      console.error('Invalid entity type selected:', selectElement.value);
+  updateEntityType(event: SelectChangeEvent) {
+    console.log(event);
+    if (event.value !== 'tracks' && event.value !== 'artists') {
+      console.error('Invalid entity type selected:', event.value);
       return;
     }
-    const selectedValue = selectElement.value as EntityType;
+    const selectedValue = event.value as EntityType;
 
     // Dispatch an action to update the entity type in the store
     this.store.dispatch(
