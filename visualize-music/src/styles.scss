@@ -7,58 +7,6 @@ body {
   min-height: 100vh;
 }
 
-/* Container styling */
-.content-wrapper {
-  width: 95%;
-  max-width: 1100px;
-  margin: 1rem auto;
-  /* Reduced top/bottom margin */
-  background-color: white;
-  padding: 1rem 1.5rem;
-  /* Adjusted padding */
-  border-radius: 0.75rem;
-  box-shadow:
-    0 4px 6px -1px rgb(0 0 0 / 0.1),
-    0 2px 4px -2px rgb(0 0 0 / 0.1);
-  border: 1px solid #e5e7eb;
-}
-
-/* Buttons & Inputs - Refined */
-select,
-input[type="date"],
-input[type="text"] {
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.375rem;
-  border: 1px solid #d1d5db;
-  margin: 0.25rem;
-  background-color: white;
-  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  width: 100%;
-  /* Full width on mobile */
-  max-width: none;
-  /* Override previous max-width */
-}
-
-input[type="date"] {
-  height: calc(1rem + 1rem + 2px);
-}
-
-/* Match button height */
-/* Specific widths for larger screens */
-@media (min-width: 640px) {
-  select,
-  input[type="date"],
-  input[type="text"] {
-    width: auto;
-  }
-
-  #searchInput {
-    width: 100%;
-  }
-
-  /* Keep search full width */
-}
-
 .desktop {
   @media (max-width: 639px) {
     display: none !important;

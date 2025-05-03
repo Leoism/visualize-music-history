@@ -85,33 +85,3 @@
     }
   }
 }
-
-// --- Example HTML Structure this SCSS assumes ---
-/*
-<header class="page-controls">
-    <div class="control-group show-list-group">
-        <label for="show-list">Show List:</label>
-        <select id="show-list">
-            <option>Top Tracks</option>
-            // Other options...
-        </select>
-    </div>
-
-    <div class="control-group week-nav-group">
-        <button class="prev-week">&lt; Prev</button>
-        <span class="week-label">Week: 2025-03-16</span>
-        <button class="next-week">Next &gt;</button>
-    </div>
-
-    <div class="control-group jump-to-group">
-        <label for="jump-date">Jump to:</label>
-        <input type="date" id="jump-date" value="2025-03-16">
-        <button class="go-button">Go</button>
-    </div>
-
-    <div class="control-group action-buttons">
-        <button class="export-button">Export Top 15</button>
-        <button class="settings-button">Settings</button>
-    </div>
-</header>
-*/

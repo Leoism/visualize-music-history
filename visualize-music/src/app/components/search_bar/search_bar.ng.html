@@ -8,4 +8,16 @@
   [dropdown]="true"
   size="large"
   [fluid]="true"
-/>
+>
+  <ng-template let-item #item>
+    <div class="flex items-center gap-2">
+      <div class="suggestion-type">
+        {{ item.type === "artists" ? "[Artist]" : "[Track]" }}
+      </div>
+      <div>{{ item.display }}</div>
+      @if (item.type === "tracks") {
+        <div class="suggestion-artist">- {{ item.artist }}</div>
+      }
+    </div>
+  </ng-template>
+</p-autocomplete>

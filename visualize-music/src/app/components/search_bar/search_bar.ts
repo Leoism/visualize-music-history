@@ -44,14 +44,14 @@ export class SearchBarComponent {
           this.items.push({
             key,
             type: 'artists',
-            display: `[Artist] ${value.details.artistName || key}`,
+            display: value.details.artistName || key,
           });
         });
         data.tracks.forEach((value, key) => {
           this.items.push({
             key,
             type: 'tracks',
-            display: `[Track] ${value.details.trackName || key} - ${value.details.artistName || 'Unknown Artist'}`,
+            display: value.details.trackName || key,
             artist: value.details.artistName || 'Unknown Artist',
           });
         });
