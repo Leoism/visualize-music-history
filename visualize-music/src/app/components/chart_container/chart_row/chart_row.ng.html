@@ -1,5 +1,5 @@
 @if (item; as chartItem) {
-  <div class="chart-row">
+  <div (click)="handleRowClick(chartItem)" class="chart-row">
     <div class="list-rank-change-col mobile">
       <div class="list-rank">{{ chartItem.rank }}</div>
       <div class="list-change {{ getRankClass(chartItem.rankStatus) }}">

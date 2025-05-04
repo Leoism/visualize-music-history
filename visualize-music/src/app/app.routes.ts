@@ -4,6 +4,7 @@ import { HomePage } from './pages/home/home';
 import { dataExistsRouteGuard } from './route_guards/data_exists_route_guard';
 import { latestChartWeekRouteGuard } from './route_guards/latest_chart_week_route_guard';
 import { SettingsPage } from './pages/settings/settings';
+import { DetailsPage } from './pages/details/details';
 
 export const routes: Routes = [
   {
@@ -31,6 +32,10 @@ export const routes: Routes = [
     path: 'settings',
     canActivate: [dataExistsRouteGuard],
     component: SettingsPage,
+  },
+  {
+    path: 'details/:entityType/:id',
+    component: DetailsPage,
   },
   {
     path: '**',

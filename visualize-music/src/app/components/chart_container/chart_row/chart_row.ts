@@ -2,6 +2,7 @@ import {
   AfterViewInit,
   ChangeDetectionStrategy,
   Component,
+  inject,
   Input,
 } from '@angular/core';
 
@@ -11,6 +12,7 @@ import {
   PeakStatus,
   RankStatus,
 } from '../../../common/interfaces/data.interfaces';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-chart-row',
@@ -21,6 +23,8 @@ import {
   standalone: true,
 })
 export class ChartRowComponent implements AfterViewInit {
+  private readonly router = inject(Router);
+
   @Input() item?: ChartItem;
   errors = 0;
 
@@ -117,5 +121,12 @@ export class ChartRowComponent implements AfterViewInit {
         error: (unused) => {},
       };
     }
+  }
+
+  handleRowClick(item: ChartItem) {
+    const id = item.key;
+    const type = item.entityType;
+
+    this.router.navigate(['/details', type, id]);
   }
 }
