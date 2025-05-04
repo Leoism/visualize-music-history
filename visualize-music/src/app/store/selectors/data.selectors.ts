@@ -298,3 +298,23 @@ export const selectLastWeekDate = createSelector(
   selectAllWeeks,
   (allWeeks: Date[]): Date | null => allWeeks?.[allWeeks.length - 1] ?? null
 );
+
+export const selectTracksMap = createSelector(
+  selectDataState,
+  (state: DataState) => state.processedData?.tracks
+);
+
+export const selectTrackByIdSelectorFactory = (id: EntityKey) =>
+  createSelector(selectTracksMap, (tracksMap) => {
+    return tracksMap ? tracksMap.get(id) : undefined;
+  });
+
+export const selectArtistsMap = createSelector(
+  selectDataState,
+  (state: DataState) => state.processedData?.artists
+);
+
+export const selectArtistByIdSelectorFactory = (id: EntityKey) =>
+  createSelector(selectArtistsMap, (artistsMap) => {
+    return artistsMap ? artistsMap.get(id) : undefined;
+  });

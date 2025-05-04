@@ -378,6 +378,8 @@ export class DataEffects {
         totalPlays: 0,
         firstPlayDate: listenDate,
         lastPlayDate: listenDate,
+        peakDate: listenDate,
+        peakedAt: 0,
         history: [],
       };
       detailMap.set(key, detail!);
@@ -622,6 +624,22 @@ export class DataEffects {
         details.trackName = key.split(COMPOSITE_KEY_SEPARATOR)[1];
       }
 
+      let peak = 101;
+      let peakWeek = null;
+      for (const entry of enrichedHistory) {
+        if (entry.rank === 1) {
+          peak = 1;
+          peakWeek = entry.week;
+          break;
+        }
+        const updatedPeak = Math.min(entry.rank, peak);
+        if (updatedPeak < peak) {
+          peak = updatedPeak;
+          peakWeek = entry.week;
+        }
+      }
+      details.peakDate = peakWeek;
+      details.peakedAt = peak;
       finalDataMap.set(key, { details, history: enrichedHistory });
     });
 

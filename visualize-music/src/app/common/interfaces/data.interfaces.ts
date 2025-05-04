@@ -39,6 +39,8 @@ interface BaseChartEntityData {
   totalPlays: number;
   firstPlayDate: Date | null;
   lastPlayDate: Date | null;
+  peakedAt: number | null;
+  peakDate: Date | null;
   history: HistoryEntry[];
 }
 

@@ -35,6 +35,7 @@ export const routes: Routes = [
   },
   {
     path: 'details/:entityType/:id',
+    canActivate: [dataExistsRouteGuard],
     component: DetailsPage,
   },
   {
