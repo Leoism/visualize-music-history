@@ -9,6 +9,7 @@
     optionLabel="display"
     size="large"
     [fluid]="true"
+    (onSelect)="onSelect($event)"
   >
     <ng-template let-item #item>
       <div class="flex items-center gap-2">

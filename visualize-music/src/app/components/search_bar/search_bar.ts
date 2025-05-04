@@ -7,11 +7,16 @@ import {
 
 import { CommonModule } from '@angular/common';
 import { Store } from '@ngrx/store';
-import { AutoComplete, AutoCompleteCompleteEvent } from 'primeng/autocomplete';
+import {
+  AutoComplete,
+  AutoCompleteCompleteEvent,
+  AutoCompleteSelectEvent,
+} from 'primeng/autocomplete';
 import { EntityKey, EntityType } from '../../common/interfaces/data.interfaces';
 import { selectProcessedData } from '../../store/selectors/data.selectors';
 import { FormsModule } from '@angular/forms';
 import { Button } from 'primeng/button';
+import { Router } from '@angular/router';
 
 interface SearchSuggestion {
   key: EntityKey;
@@ -30,6 +35,7 @@ interface SearchSuggestion {
 export class SearchBarComponent {
   private readonly store = inject(Store);
   private readonly destoryRef = inject(DestroyRef);
+  private readonly router = inject(Router);
 
   private readonly processedData$ = this.store.select(selectProcessedData);
 
@@ -102,5 +108,10 @@ export class SearchBarComponent {
     });
 
     this.filteredItems = allMatches;
+  }
+
+  onSelect(event: AutoCompleteSelectEvent) {
+    const selection = event.value as SearchSuggestion;
+    this.router.navigate(['/details', selection.type, selection.key]);
   }
 }
