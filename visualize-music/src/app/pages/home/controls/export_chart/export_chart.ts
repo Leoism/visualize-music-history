@@ -288,7 +288,9 @@ export class ExportChartComponent {
     var link = document.createElement('a');
     link.download = `top-${this.exportCount}-week-of-${formatDateKey(self.currentWeekDate)}.png`;
     htmlToImage
-      .toPng(self.exportContainer.nativeElement)
+      .toPng(self.exportContainer.nativeElement, {
+        width: 800,
+      })
       .then((dataUrl) => {
         link.href = dataUrl;
         link.click();

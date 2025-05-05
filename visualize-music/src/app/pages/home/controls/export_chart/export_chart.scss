@@ -22,10 +22,6 @@ p-dialog-footer {
   font-size: 10px;
   color: #4f545e;
   display: block;
-  @media (min-width: 640px) {
-    font-size: 0.7rem;
-    line-height: 1;
-  }
 }
 
 .title {
@@ -33,11 +29,6 @@ p-dialog-footer {
   color: #111827;
   display: block;
   font-weight: 450;
-  @media (min-width: 640px) {
-    font-size: 0.9rem;
-    font-weight: 600;
-    line-height: 2;
-  }
 }
 
 .peak-cell {
@@ -54,7 +45,7 @@ p-dialog-footer {
 
 .export-container {
   width: 800px; /* Max width for the table container */
-  margin: 2rem auto; /* Center horizontally with top/bottom margin */
+  margin: 0; /* Center horizontally with top/bottom margin */
   background: linear-gradient(to bottom, #0e7cea, #1a5693, #16304a);
   border-radius: 0.5rem; /* Rounded corners for the container */
   padding: 1.5rem; /* Padding inside the container */
@@ -89,31 +80,18 @@ p-dialog-footer {
   color: #9ca3af;
   font-size: 1.25rem;
   font-weight: bold;
-
-  @media (min-width: 640px) {
-    font-size: 1.5rem;
-  }
 }
 
 .mobile-header {
-  font-size: inherit;
-  @media (max-width: 639px) {
-    font-size: 12px !important;
-  }
+  font-size: 12px !important;
 }
 
 .mobile-cell {
-  font-size: inherit;
-  @media (max-width: 639px) {
-    font-size: 14px !important;
-  }
+  font-size: 14px !important;
 }
 
 .mobile-subtitle {
-  font-size: inherit;
-  @media (max-width: 639px) {
-    font-size: 10px !important;
-  }
+  font-size: 10px !important;
 }
 
 $border-size: 2px solid;
