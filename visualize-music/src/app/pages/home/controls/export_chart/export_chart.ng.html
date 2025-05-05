@@ -129,8 +129,12 @@
                 }}"
                 [ngStyle]="getExportRowBackgroundColor(item.playPercentChange)"
               >
-                {{ item.playPercentChange > 0 ? "+" : ""
-                }}{{ item.playPercentChange | number: "1.0-1" }}%
+                @if (item.playPercentChange != inf) {
+                  {{ item.playPercentChange > 0 ? "+" : ""
+                  }}{{ item.playPercentChange | number: "1.0-1" }}%
+                } @else {
+                  --
+                }
               </td>
               <!-- Peak -->
               <td

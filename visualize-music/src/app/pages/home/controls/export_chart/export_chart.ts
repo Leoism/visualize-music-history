@@ -104,11 +104,13 @@ export class ExportChartComponent {
     )
   );
 
-  newColor = '#ffe97f';
+  newColor = '#fbbf24';
   reEntryColor = '#a855f7';
   postiveDeltaColor = '#10b981';
   negativeDeltaColor = '#ef4444';
   equalColor = '#6b7280';
+
+  readonly inf = Infinity;
 
   showDialog() {
     this.visible = true;
@@ -182,7 +184,9 @@ export class ExportChartComponent {
     // Scale factor based on % change, capped at MAX_PLAY_CHANGE_FACTOR (e.g., 1.0 for 100% change)
     const factor = Math.min(absChange / 100, EXPORT_MAX_PLAY_CHANGE_FACTOR);
 
-    if (playPercentChange > 0) {
+    if (playPercentChange === Infinity) {
+      return {};
+    } else if (playPercentChange > 0) {
       return {
         'background-color': this.interpolateColor(
           EXPORT_ROW_BG_BASE,

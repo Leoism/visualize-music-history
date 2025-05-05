@@ -76,7 +76,7 @@ export class DetailsPage implements OnInit, OnChanges {
   }
 
   craftLink(week: string) {
-    return `/charts/${this.entityType}/${week}`;
+    return ['/charts', week, this.entityType];
   }
 
   private initializeEntityObservable(): void {
