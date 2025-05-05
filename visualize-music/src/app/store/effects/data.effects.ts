@@ -23,7 +23,7 @@ import {
   RankStatus,
   RawDataEntry,
   TrackData,
-  // BaseChartEntityData, // REMOVED Import
+  // BaseChartEntityData, // No longer needed
 } from '../../common/interfaces/data.interfaces';
 import { Store } from '@ngrx/store';
 import { AppState } from '../state/app.state';
@@ -47,6 +47,8 @@ import {
 import { Router } from '@angular/router';
 import { applySettings } from '../actions/settings.actions';
 
+type HistoryCalculableEntity = TrackData | ArtistData;
+
 @Injectable()
 export class DataEffects {
   constructor(
@@ -64,24 +66,17 @@ export class DataEffects {
       ),
       switchMap(([action, rawData, settings]) => {
         if (!rawData) {
-          console.warn(
-            '[DataEffects] processDataStart triggered, but rawData is null. Skipping processing.'
-          );
           return of(
             DataActions.processDataFailure({
               error: 'No raw data available for processing.',
             })
           );
         }
-
-        console.log('[DataEffects] Starting data processing call...');
         return from(this.processRawData(rawData, settings)).pipe(
-          map((processedData) => {
-            console.log('[DataEffects] Data processing successful.');
-            return DataActions.processDataSuccess({ processedData });
-          }),
+          map((processedData) =>
+            DataActions.processDataSuccess({ processedData })
+          ),
           catchError((error) => {
-            console.error('[DataEffects] Data processing failed:', error);
             const errorMessage =
               error instanceof Error ? error.message : String(error);
             return of(DataActions.processDataFailure({ error: errorMessage }));
@@ -95,9 +90,7 @@ export class DataEffects {
     () =>
       this.actions$.pipe(
         ofType(DataActions.processDataSuccess),
-        tap(() => {
-          this.router.navigate(['/charts']);
-        })
+        tap(() => this.router.navigate(['/charts']))
       ),
     { dispatch: false }
   );
@@ -109,16 +102,9 @@ export class DataEffects {
     return from(
       new Promise<ProcessedData>((resolve, reject) => {
         try {
-          console.log('Calling processListeningData...');
-          const startTime = performance.now();
           const processedData = this.processListeningData(rawData, settings);
-          const endTime = performance.now();
-          console.log(
-            `processListeningData finished in ${endTime - startTime} ms.`
-          );
           resolve(processedData);
         } catch (error) {
-          console.error('Error during post-parse processing:', error);
           reject(
             new Error(
               'Error during post-parse processing:' +
@@ -140,17 +126,10 @@ export class DataEffects {
       allWeeks: [],
       rawData,
     };
-
-    console.log(
-      `Processing listening data (Window: ${
-        settings.isAllTimeMode
-          ? 'All-Time'
-          : settings.slidingWindowWeeks + ' weeks'
-      })...`
-    );
+    console.log(`Processing listening data...`);
     const overallStartTime = performance.now();
 
-    // 1. Aggregate weekly counts and basic entity details
+    // 1. Aggregation
     const step1StartTime = performance.now();
     const { weeklyCounts, entityDetails } = this.aggregateWeeklyCounts(rawData);
     const step1EndTime = performance.now();
@@ -158,41 +137,34 @@ export class DataEffects {
       `Step 1 (Aggregation) took: ${step1EndTime - step1StartTime} ms`
     );
 
-    // 2. Get sorted list of all unique week start dates
+    // 2. Get and sort weeks
     const allWeeks = Array.from(weeklyCounts.keys())
       .map((weekKey) => parseISO(weekKey))
       .sort(compareAsc);
-
     if (allWeeks.length === 0) {
-      console.warn('No valid listening data found after aggregation.');
-      processedData.allWeeks = [];
-      const overallEndTime = performance.now();
-      console.log(
-        `Total data processing finished (no data) in ${overallEndTime - overallStartTime} ms.`
-      );
       return processedData;
     }
     processedData.allWeeks = allWeeks;
 
-    // 3. Calculate ranks for each week (Sliding Window or All-Time)
+    // 3. Calculate ranks
     const step2StartTime = performance.now();
-    // calculateRanksOptimized remains unchanged internally
     const { tempTrackHistory, tempArtistHistory } =
       this.calculateRanksOptimized(allWeeks, weeklyCounts, settings);
     const step2EndTime = performance.now();
     console.log(`Step 2 (Ranking) took: ${step2EndTime - step2StartTime} ms`);
 
-    // 4. Calculate status, peak position, weeks on chart, etc. and finalize data structure
+    // 4. Calculate history stats using the generic function
     const step3StartTime = performance.now();
 
-    processedData.tracks = this.calculateTrackHistoryStats(
+    processedData.tracks = this.calculateHistoryStatsGeneric(
       tempTrackHistory,
       entityDetails.tracks
-    );
-    processedData.artists = this.calculateArtistHistoryStats(
+    ) as Map<EntityKey, ProcessedTrackData>;
+
+    processedData.artists = this.calculateHistoryStatsGeneric(
       tempArtistHistory,
       entityDetails.artists
-    );
+    ) as Map<EntityKey, ProcessedArtistData>;
 
     const step3EndTime = performance.now();
     console.log(
@@ -208,7 +180,7 @@ export class DataEffects {
 
   private aggregateWeeklyCounts(rawData: RawDataEntry[]) {
     const weeklyCounts: Map<
-      string, // weekKey (e.g., 'YYYY-MM-DD')
+      string,
       {
         trackCounts: Map<EntityKey, number>;
         artistCounts: Map<EntityKey, number>;
@@ -224,17 +196,13 @@ export class DataEffects {
       const trackName = (listen.track || '').trim();
       const artistName = (listen.artist || '').trim();
       if (!trackName || !artistName) continue;
-
       const listenDate = fromUnixTime(listen.uts);
       const weekStartDate = getWeekStartDate(listenDate);
       const weekKey = formatDateKey(weekStartDate);
-
       if (!weekKey) continue;
-
       const trackMbid = (listen.track_mbid || '').trim();
       const artistMbid = (listen.artist_mbid || '').trim();
       const albumMbid = (listen.album_mbid || '').trim();
-
       const artistKey = artistMbid || artistName;
       const trackKey =
         trackMbid || `${artistKey}${COMPOSITE_KEY_SEPARATOR}${trackName}`;
@@ -244,7 +212,6 @@ export class DataEffects {
         weekData = { trackCounts: new Map(), artistCounts: new Map() };
         weeklyCounts.set(weekKey, weekData);
       }
-
       weekData.trackCounts.set(
         trackKey,
         (weekData.trackCounts.get(trackKey) ?? 0) + 1
@@ -267,10 +234,8 @@ export class DataEffects {
         { artistName, artistMbid }
       );
     }
-
     return { weeklyCounts, entityDetails };
   }
-
   private updateTrackDetailsInternal(
     detailMap: Map<EntityKey, TrackData>,
     key: EntityKey,
@@ -328,10 +293,7 @@ export class DataEffects {
     detailMap: Map<EntityKey, ArtistData>,
     key: EntityKey,
     listenDate: Date,
-    newData: {
-      artistName: string;
-      artistMbid: string | null;
-    }
+    newData: { artistName: string; artistMbid: string | null }
   ) {
     let detail = detailMap.get(key);
 
@@ -469,23 +431,27 @@ export class DataEffects {
         });
       });
     });
+
     return { tempTrackHistory, tempArtistHistory };
   }
 
-  private calculateTrackHistoryStats(
+  private calculateHistoryStatsGeneric<T extends HistoryCalculableEntity>(
     tempHistoryMap: Map<
       EntityKey,
       Array<{ week: Date; rank: number; playsInWindow: number }>
     >,
-    detailsMap: Map<EntityKey, TrackData>
-  ): Map<EntityKey, ProcessedTrackData> {
-    const finalDataMap: Map<EntityKey, ProcessedTrackData> = new Map();
+    detailsMap: Map<EntityKey, T>
+  ): Map<EntityKey, { details: T; history: HistoryEntry[] }> {
+    const finalDataMap: Map<
+      EntityKey,
+      { details: T; history: HistoryEntry[] }
+    > = new Map();
 
     tempHistoryMap.forEach((rawHistory, key) => {
       const details = detailsMap.get(key);
       if (!details) {
         console.warn(
-          `No track details found for key during history calculation: ${key}. Skipping.`
+          `No details found for key during history calculation: ${key}. Skipping.`
         );
         return;
       }
@@ -504,6 +470,7 @@ export class DataEffects {
           rank: number;
           playsInWindow: number;
         } | null = null;
+
         if (i > 0) {
           const potentialPrevWeekDate = subWeeks(currentEntry.week, 1);
           if (isSameDay(rawHistory[i - 1].week, potentialPrevWeekDate)) {
@@ -546,105 +513,6 @@ export class DataEffects {
         } else if (lastWeekPlays === null && currentEntry.playsInWindow > 0) {
           playPercentChange = Infinity;
         }
-
-        enrichedHistory.push({
-          week: currentEntry.week,
-          rank: currentRank,
-          playsInWindow: currentEntry.playsInWindow,
-          status: status,
-          peakPosition:
-            overallPeakPosition <= MAX_LIST_ITEMS ? overallPeakPosition : null,
-          peakStatus: peakStatus,
-          weeksOnChart: i + 1,
-          playPercentChange: playPercentChange,
-          lastWeekRank: lastWeekRank,
-        });
-      }
-
-      details.peakedAt =
-        overallPeakPosition <= MAX_LIST_ITEMS ? overallPeakPosition : null;
-      details.peakDate = overallPeakDate;
-
-      finalDataMap.set(key, { details, history: enrichedHistory }); // Structure is ProcessedTrackData
-    });
-    return finalDataMap;
-  }
-
-  private calculateArtistHistoryStats(
-    tempHistoryMap: Map<
-      EntityKey,
-      Array<{ week: Date; rank: number; playsInWindow: number }>
-    >,
-    detailsMap: Map<EntityKey, ArtistData>
-  ): Map<EntityKey, ProcessedArtistData> {
-    const finalDataMap: Map<EntityKey, ProcessedArtistData> = new Map();
-
-    tempHistoryMap.forEach((rawHistory, key) => {
-      const details = detailsMap.get(key); // Type is ArtistData | undefined
-      if (!details) {
-        console.warn(
-          `No artist details found for key during history calculation: ${key}. Skipping.`
-        );
-        return;
-      }
-
-      rawHistory.sort((a, b) => compareAsc(a.week, b.week));
-
-      const enrichedHistory: HistoryEntry[] = [];
-      let overallPeakPosition = DEFAULT_PEAK_VALUE;
-      let overallPeakDate: Date | null = null;
-
-      for (let i = 0; i < rawHistory.length; i++) {
-        const currentEntry = rawHistory[i];
-        const currentRank = currentEntry.rank;
-        let prevHistoryEntry: {
-          week: Date;
-          rank: number;
-          playsInWindow: number;
-        } | null = null;
-        if (i > 0) {
-          const potentialPrevWeekDate = subWeeks(currentEntry.week, 1);
-          if (isSameDay(rawHistory[i - 1].week, potentialPrevWeekDate)) {
-            prevHistoryEntry = rawHistory[i - 1];
-          }
-        }
-        const lastWeekRank = prevHistoryEntry ? prevHistoryEntry.rank : null;
-        const lastWeekPlays = prevHistoryEntry
-          ? prevHistoryEntry.playsInWindow
-          : null;
-
-        let peakStatus: PeakStatus = null;
-        if (currentRank < overallPeakPosition) {
-          overallPeakPosition = currentRank;
-          overallPeakDate = currentEntry.week;
-          peakStatus = 'PEAK';
-        } else if (currentRank === overallPeakPosition) {
-          if (lastWeekRank !== null && currentRank < lastWeekRank) {
-            peakStatus = 'RE-PEAK';
-          }
-          if (overallPeakDate === null) {
-            overallPeakDate = currentEntry.week;
-          }
-        }
-
-        let status: RankStatus;
-        if (lastWeekRank !== null) {
-          status = lastWeekRank - currentRank;
-        } else {
-          status = i === 0 ? 'NEW' : 'RE-ENTRY';
-        }
-
-        let playPercentChange = 0;
-        if (lastWeekPlays !== null && lastWeekPlays > 0) {
-          playPercentChange =
-            ((currentEntry.playsInWindow - lastWeekPlays) / lastWeekPlays) *
-            100;
-        } else if (lastWeekPlays === 0 && currentEntry.playsInWindow > 0) {
-          playPercentChange = Infinity;
-        } else if (lastWeekPlays === null && currentEntry.playsInWindow > 0) {
-          playPercentChange = Infinity;
-        }
-
         enrichedHistory.push({
           week: currentEntry.week,
           rank: currentRank,
@@ -665,6 +533,7 @@ export class DataEffects {
 
       finalDataMap.set(key, { details, history: enrichedHistory });
     });
+
     return finalDataMap;
   }
 }
