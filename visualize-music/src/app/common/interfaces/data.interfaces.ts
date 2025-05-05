@@ -28,6 +28,14 @@ export interface HistoryEntry {
   lastWeekRank: number | null;
 }
 
+export interface HistoryGroupedByWeek {
+  weeks: Map<string, HistoryEntry>;
+}
+
+export interface HistoryGroupedByYear {
+  years: Map<number, HistoryGroupedByWeek>;
+}
+
 /** Type alias for unique identifiers (MBID or composite key) */
 export type EntityKey = string;
 
@@ -61,13 +69,13 @@ export interface ArtistData extends BaseChartEntityData {
 
 /** Represents processed data for a single track */
 export interface ProcessedTrackData {
-  history: HistoryEntry[];
+  history: HistoryGroupedByYear;
   details: TrackData;
 }
 
 /** Represents processed data for a single artist */
 export interface ProcessedArtistData {
-  history: HistoryEntry[];
+  history: HistoryGroupedByYear;
   details: ArtistData;
 }
 

@@ -14,6 +14,7 @@ import { map, Observable, of } from 'rxjs';
 import {
   EntityKey,
   EntityType,
+  HistoryGroupedByYear,
   ProcessedArtistData,
   ProcessedTrackData,
 } from '../../common/interfaces/data.interfaces';
@@ -22,6 +23,7 @@ import {
   selectArtistByIdSelectorFactory,
   selectTrackByIdSelectorFactory,
 } from '../../store/selectors/data.selectors';
+import { compareAsc } from 'date-fns';
 
 interface CondensedArtistDetails {
   name: string;
@@ -113,10 +115,8 @@ export class DetailsPage implements OnInit, OnChanges {
     const totalPlays = data.details.totalPlays;
     const firstPlayedOn = formatDateKey(data.details.firstPlayDate ?? '');
     const lastPlayedOn = formatDateKey(data.details.lastPlayDate ?? '');
-    const firstChartedOn = formatDateKey(data.history[0].week ?? '');
-    const lastChartedOn = formatDateKey(
-      data.history[data.history.length - 1].week ?? ''
-    );
+    const firstChartedOn = this.getEarliestEntry(data.history);
+    const lastChartedOn = this.getLatestEntry(data.history);
     const peakedAt = data.details.peakedAt;
     const peakWeek = formatDateKey(data.details.peakDate ?? '');
     return {
@@ -128,5 +128,39 @@ export class DetailsPage implements OnInit, OnChanges {
       peakedAt: peakedAt ?? 101,
       peakWeek: peakWeek ?? '',
     };
+  }
+
+  private getEarliestEntry(history: HistoryGroupedByYear): string {
+    let earliestYearKey = Infinity;
+    let earliestWeekKey = '3000-01-01';
+    history.years.forEach((value, key) => {
+      if (key < earliestYearKey) {
+        earliestYearKey = key;
+      }
+    });
+    history.years.get(earliestYearKey)?.weeks.forEach((value, key) => {
+      if (compareAsc(key, earliestWeekKey) < 0) {
+        earliestWeekKey = key;
+      }
+    });
+
+    return formatDateKey(earliestWeekKey) ?? '';
+  }
+
+  private getLatestEntry(history: HistoryGroupedByYear): string {
+    let latestYearKey = -Infinity;
+    let latestWeekKey = '0000-01-01';
+    history.years.forEach((value, key) => {
+      if (key > latestYearKey) {
+        latestYearKey = key;
+      }
+    });
+    history.years.get(latestYearKey)?.weeks.forEach((value, key) => {
+      if (compareAsc(key, latestWeekKey) > 0) {
+        latestWeekKey = key;
+      }
+    });
+
+    return formatDateKey(latestWeekKey) ?? '';
   }
 }

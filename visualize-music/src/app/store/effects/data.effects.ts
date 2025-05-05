@@ -16,6 +16,8 @@ import {
   ArtistData,
   EntityKey,
   HistoryEntry,
+  HistoryGroupedByWeek,
+  HistoryGroupedByYear,
   PeakStatus,
   ProcessedArtistData,
   ProcessedData,
@@ -43,6 +45,7 @@ import {
   parseISO,
   subWeeks,
   formatISO,
+  getYear,
 } from 'date-fns';
 import { Router } from '@angular/router';
 import { applySettings } from '../actions/settings.actions';
@@ -441,10 +444,10 @@ export class DataEffects {
       Array<{ week: Date; rank: number; playsInWindow: number }>
     >,
     detailsMap: Map<EntityKey, T>
-  ): Map<EntityKey, { details: T; history: HistoryEntry[] }> {
+  ): Map<EntityKey, { details: T; history: HistoryGroupedByYear }> {
     const finalDataMap: Map<
       EntityKey,
-      { details: T; history: HistoryEntry[] }
+      { details: T; history: HistoryGroupedByYear }
     > = new Map();
 
     tempHistoryMap.forEach((rawHistory, key) => {
@@ -458,7 +461,9 @@ export class DataEffects {
 
       rawHistory.sort((a, b) => compareAsc(a.week, b.week));
 
-      const enrichedHistory: HistoryEntry[] = [];
+      const enrichedHistory: HistoryGroupedByYear = {
+        years: new Map(),
+      };
       let overallPeakPosition = DEFAULT_PEAK_VALUE;
       let overallPeakDate: Date | null = null;
 
@@ -513,7 +518,17 @@ export class DataEffects {
         } else if (lastWeekPlays === null && currentEntry.playsInWindow > 0) {
           playPercentChange = Infinity;
         }
-        enrichedHistory.push({
+        const year = getYear(currentEntry.week);
+        const weekKey = formatDateKey(currentEntry.week);
+        if (enrichedHistory.years.get(year) === undefined) {
+          enrichedHistory.years.set(year, {
+            weeks: new Map<string, HistoryEntry>(),
+          });
+        }
+        if (!weekKey) {
+          continue;
+        }
+        enrichedHistory.years.get(year)!.weeks.set(weekKey, {
           week: currentEntry.week,
           rank: currentRank,
           playsInWindow: currentEntry.playsInWindow,

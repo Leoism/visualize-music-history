@@ -1,10 +1,5 @@
 import { createFeatureSelector, createSelector } from '@ngrx/store';
 import {
-  DEFAULT_PEAK_VALUE,
-  MAX_LIST_ITEMS,
-} from '../../common/utils/constants';
-import { formatDateKey } from '../../common/utils/date_utils';
-import {
   ArtistData,
   ChartItem,
   EntityKey,
@@ -13,9 +8,13 @@ import {
   ProcessedArtistData,
   ProcessedData,
   ProcessedTrackData,
-  RawDataEntry,
   TrackData,
 } from '../../common/interfaces/data.interfaces';
+import {
+  DEFAULT_PEAK_VALUE,
+  MAX_LIST_ITEMS,
+} from '../../common/utils/constants';
+import { formatDateKey } from '../../common/utils/date_utils';
 import { DataState } from '../state/data.state'; // Adjust path if needed
 
 import {
@@ -23,6 +22,7 @@ import {
   selectSelectedEntityType,
   selectSelectedHistoryEntity,
 } from './ui.selectors'; // Import relevant UI selectors
+import { getYear } from 'date-fns';
 
 // This encapsulates the logic previously in prepareTop100ListData
 function getListDataForWeek(
@@ -37,9 +37,9 @@ function getListDataForWeek(
   }
 
   dataMap.forEach((data, key) => {
-    const rankEntry = data.history?.find(
-      (h: HistoryEntry) => formatDateKey(h.week) === weekKey
-    );
+    const rankEntry = data.history.years
+      .get(getYear(weekKey))
+      ?.weeks.get(weekKey);
 
     if (rankEntry && rankEntry.rank <= MAX_LIST_ITEMS) {
       // Only include items actually in the top N for that week
