@@ -10,6 +10,7 @@
     size="large"
     [fluid]="true"
     (onSelect)="onSelect($event)"
+    placeholder="Search Track or Artist History..."
   >
     <ng-template let-item #item>
       <div class="flex items-center gap-2">
@@ -23,5 +24,5 @@
       </div>
     </ng-template>
   </p-autocomplete>
-  <p-button [icon]="'pi pi-search'"></p-button>
+  <p-button [size]="'large'" [icon]="'pi pi-search'"></p-button>
 </div>

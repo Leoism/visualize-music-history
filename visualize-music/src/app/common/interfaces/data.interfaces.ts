@@ -35,7 +35,7 @@ export type EntityKey = string;
 export type EntityType = 'tracks' | 'artists';
 
 /** Base interface for shared properties between TrackData and ArtistData */
-interface BaseChartEntityData {
+export interface BaseChartEntityData {
   totalPlays: number;
   firstPlayDate: Date | null;
   lastPlayDate: Date | null;

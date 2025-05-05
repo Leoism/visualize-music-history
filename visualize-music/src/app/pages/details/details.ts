@@ -8,8 +8,8 @@ import {
   OnInit,
   SimpleChanges,
 } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { Store } from '@ngrx/store';
-import { Card } from 'primeng/card';
 import { map, Observable, of } from 'rxjs';
 import {
   EntityKey,
@@ -17,12 +17,11 @@ import {
   ProcessedArtistData,
   ProcessedTrackData,
 } from '../../common/interfaces/data.interfaces';
+import { formatDateKey } from '../../common/utils/date_utils';
 import {
   selectArtistByIdSelectorFactory,
   selectTrackByIdSelectorFactory,
 } from '../../store/selectors/data.selectors';
-import { formatDateKey } from '../../common/utils/date_utils';
-import { RouterLink } from '@angular/router';
 
 interface CondensedArtistDetails {
   name: string;
