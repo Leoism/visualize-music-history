@@ -266,7 +266,6 @@ export class DataEffects {
         lastPlayDate: listenDate,
         peakedAt: null,
         peakDate: null,
-        history: [],
       };
       detailMap.set(key, detail);
     }
@@ -310,7 +309,6 @@ export class DataEffects {
         lastPlayDate: listenDate,
         peakedAt: null,
         peakDate: null,
-        history: [],
       };
       detailMap.set(key, detail);
     }

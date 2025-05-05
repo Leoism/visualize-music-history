@@ -1,6 +1,7 @@
 import { AsyncPipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   inject,
   Input,
@@ -10,20 +11,25 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Store } from '@ngrx/store';
-import { map, Observable, of } from 'rxjs';
+import { compareAsc } from 'date-fns';
+import { ChartModule } from 'primeng/chart';
+import { combineLatest, combineLatestWith, map, Observable, of } from 'rxjs';
 import {
   EntityKey,
   EntityType,
+  HistoryEntry,
   HistoryGroupedByYear,
   ProcessedArtistData,
   ProcessedTrackData,
 } from '../../common/interfaces/data.interfaces';
 import { formatDateKey } from '../../common/utils/date_utils';
 import {
+  selectAllWeeks,
   selectArtistByIdSelectorFactory,
   selectTrackByIdSelectorFactory,
 } from '../../store/selectors/data.selectors';
-import { compareAsc } from 'date-fns';
+import { historyMapToArray } from '../../common/utils/utils';
+import { ChartOptions } from 'chart.js';
 
 interface CondensedArtistDetails {
   name: string;
@@ -41,6 +47,7 @@ interface CondensedTrackDetails {
 }
 
 interface EnrichedEntityDetails {
+  name: string;
   totalPlays: number;
   firstPlayedOn: string; // YYYY-MM-DD
   lastPlayedOn: string; // YYYY-MM-DD
@@ -48,24 +55,53 @@ interface EnrichedEntityDetails {
   lastChartedOn: string; // YYYY-MM-DD
   peakedAt: number;
   peakWeek: string; // YYYY-MM-DD
+  history: HistoryEntry[];
   topTracks?: CondensedTrackDetails[]; // only for artists
   artistOverview?: CondensedArtistDetails; // only for tracks
 }
 
 @Component({
   selector: 'app-details-page',
-  imports: [AsyncPipe, RouterLink],
+  imports: [AsyncPipe, RouterLink, ChartModule],
   templateUrl: './details.ng.html',
   styleUrls: ['details.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DetailsPage implements OnInit, OnChanges {
   private readonly store = inject(Store);
+  private readonly changeDetectorRef = inject(ChangeDetectorRef);
 
   @Input() id: EntityKey = '';
   @Input() entityType?: EntityType;
 
   enrichedEntity$!: Observable<EnrichedEntityDetails | undefined>;
+
+  allWeeks$ = this.store.select(selectAllWeeks);
+
+  historicalData$: any;
+  options: ChartOptions = {
+    maintainAspectRatio: false,
+    aspectRatio: 0.6,
+    scales: {
+      y: {
+        min: 1,
+        max: 100,
+        reverse: true,
+        ticks: {
+          stepSize: 10,
+        },
+      },
+      x: {
+        time: {
+          unit: 'day',
+          parser: 'yyyy-MM-dd',
+        },
+        ticks: {
+          stepSize: 50,
+        },
+      },
+    },
+  };
 
   ngOnInit() {
     this.initializeEntityObservable();
@@ -93,6 +129,13 @@ export class DetailsPage implements OnInit, OnChanges {
             return undefined;
           })
         );
+      this.historicalData$ = this.enrichedEntity$.pipe(
+        combineLatestWith(this.allWeeks$),
+        map(([entity, allWeeks]) => {
+          console.log(this.craftChartJsData(entity, allWeeks));
+          return this.craftChartJsData(entity, allWeeks);
+        })
+      );
     } else if (this.entityType === 'artists' && this.id) {
       this.enrichedEntity$ = this.store
         .select(selectArtistByIdSelectorFactory(this.id))
@@ -104,6 +147,12 @@ export class DetailsPage implements OnInit, OnChanges {
             return undefined;
           })
         );
+      this.historicalData$ = this.enrichedEntity$.pipe(
+        combineLatestWith(this.allWeeks$),
+        map(([entity, allWeeks]) => {
+          return this.craftChartJsData(entity, allWeeks);
+        })
+      );
     } else {
       this.enrichedEntity$ = of(undefined);
     }
@@ -119,7 +168,14 @@ export class DetailsPage implements OnInit, OnChanges {
     const lastChartedOn = this.getLatestEntry(data.history);
     const peakedAt = data.details.peakedAt;
     const peakWeek = formatDateKey(data.details.peakDate ?? '');
+    const history = historyMapToArray(data.history);
+    const name =
+      'trackName' in data.details
+        ? data.details.trackName!
+        : data.details.artistName!;
+
     return {
+      name,
       totalPlays,
       firstPlayedOn: firstPlayedOn ?? '',
       lastPlayedOn: lastPlayedOn ?? '',
@@ -127,6 +183,44 @@ export class DetailsPage implements OnInit, OnChanges {
       lastChartedOn: lastChartedOn ?? '',
       peakedAt: peakedAt ?? 101,
       peakWeek: peakWeek ?? '',
+      history,
+    };
+  }
+
+  private craftChartJsData(
+    entity: EnrichedEntityDetails | undefined,
+    allWeeks: Date[]
+  ) {
+    if (!entity) {
+      return;
+    }
+    const history = entity?.history;
+    const weekToIndex = new Map<string, number>();
+    const labels = [];
+    const dataset = [];
+    for (let i = 0; i < allWeeks.length; i++) {
+      const label = formatDateKey(allWeeks[i])!;
+      labels.push(label);
+      weekToIndex.set(label, i);
+    }
+    const datasetLabel = entity.name;
+    console.log(history);
+    for (const entry of history) {
+      const historyWeek = formatDateKey(entry.week)!;
+      const indexToInsert = weekToIndex.get(historyWeek)!; // this should always be true and if it's not, then there is a bug
+      dataset[indexToInsert] = entry.rank;
+    }
+
+    console.log('fjkjkdfsjfsfjsdjfl12312321');
+    this.changeDetectorRef.markForCheck();
+    return {
+      labels,
+      datasets: [
+        {
+          label: datasetLabel,
+          data: dataset,
+        },
+      ],
     };
   }
 

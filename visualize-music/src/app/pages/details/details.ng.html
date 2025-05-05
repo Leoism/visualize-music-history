@@ -29,3 +29,11 @@
     </span>
   </div>
 }
+<div class="history-chart">
+  <p-chart
+    type="line"
+    [data]="historicalData$ | async"
+    class="h-[30rem]"
+    [options]="options"
+  />
+</div>

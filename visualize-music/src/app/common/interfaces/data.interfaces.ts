@@ -49,7 +49,6 @@ export interface BaseChartEntityData {
   lastPlayDate: Date | null;
   peakedAt: number | null;
   peakDate: Date | null;
-  history: HistoryEntry[];
 }
 
 /** Represents processed data for a single track */

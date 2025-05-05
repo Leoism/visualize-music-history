@@ -22,6 +22,7 @@ import {
   selectSelectedEntityType,
   selectSelectedHistoryEntity,
 } from './ui.selectors'; // Import relevant UI selectors
+import { historyMapToArray } from '../../common/utils/utils';
 
 // This encapsulates the logic previously in prepareTop100ListData
 function getListDataForWeek(
@@ -228,63 +229,64 @@ export const selectArtistDetailsForTrackHistory = createSelector(
 );
 
 /** Selects the Top N songs (by peak, then plays) for the currently viewed Artist history */
-export const selectArtistTopSongsForArtistHistory = createSelector(
-  selectAllTracksMap,
-  selectSelectedHistoryEntity, // This should be an artist entity when relevant
-  (
-    tracksMap: Map<EntityKey, TrackData>,
-    selectedEntity: { key: EntityKey; entityType: EntityType } | null
-  ): any[] => {
-    // Define a specific interface later if needed
-    if (
-      !selectedEntity ||
-      selectedEntity.entityType !== 'artists' ||
-      tracksMap.size === 0
-    ) {
-      return [];
-    }
+// export const selectArtistTopSongsForArtistHistory = createSelector(
+//   selectAllTracksMap,
+//   selectSelectedHistoryEntity, // This should be an artist entity when relevant
+//   (
+//     tracksMap: Map<EntityKey, TrackData>,
+//     selectedEntity: { key: EntityKey; entityType: EntityType } | null
+//   ): any[] => {
+//     // Define a specific interface later if needed
+//     if (
+//       !selectedEntity ||
+//       selectedEntity.entityType !== 'artists' ||
+//       tracksMap.size === 0
+//     ) {
+//       return [];
+//     }
 
-    const artistMbid = selectedEntity.key;
-    const artistTracks: any[] = []; // Use a proper interface like ArtistTopSongItem
+//     const artistMbid = selectedEntity.key;
+//     const artistTracks: any[] = []; // Use a proper interface like ArtistTopSongItem
 
-    tracksMap.forEach((trackData, trackKey) => {
-      if (trackData.artistMbid === artistMbid) {
-        // Calculate overall peak for this track
-        const overallPeak =
-          trackData.history?.reduce(
-            (min, entry) =>
-              Math.min(min, entry.peakPosition ?? DEFAULT_PEAK_VALUE),
-            DEFAULT_PEAK_VALUE
-          ) ?? DEFAULT_PEAK_VALUE;
+//     tracksMap.forEach((trackData, trackKey) => {
+//       if (trackData.artistMbid === artistMbid) {
+//         const trackHistory = historyMapToArray(trackData);
+//         // Calculate overall peak for this track
+//         const overallPeak =
+//           trackData.history?.reduce(
+//             (min, entry) =>
+//               Math.min(min, entry.peakPosition ?? DEFAULT_PEAK_VALUE),
+//             DEFAULT_PEAK_VALUE
+//           ) ?? DEFAULT_PEAK_VALUE;
 
-        const peakEntry = trackData.history?.find(
-          (entry) => entry.rank === overallPeak
-        );
-        const peakWeekDate = peakEntry?.week;
+//         const peakEntry = trackData.history?.find(
+//           (entry) => entry.rank === overallPeak
+//         );
+//         const peakWeekDate = peakEntry?.week;
 
-        artistTracks.push({
-          key: trackKey,
-          name: trackData.trackName || 'Unknown Track',
-          totalPlays: trackData.totalPlays || 0,
-          peak: overallPeak <= MAX_LIST_ITEMS ? overallPeak : null,
-          peakWeek: peakWeekDate,
-        });
-      }
-    });
+//         artistTracks.push({
+//           key: trackKey,
+//           name: trackData.trackName || 'Unknown Track',
+//           totalPlays: trackData.totalPlays || 0,
+//           peak: overallPeak <= MAX_LIST_ITEMS ? overallPeak : null,
+//           peakWeek: peakWeekDate,
+//         });
+//       }
+//     });
 
-    // Sort by peak ascending (nulls/unranked last), then by total plays descending
-    artistTracks.sort((a, b) => {
-      const peakA = a.peak === null ? DEFAULT_PEAK_VALUE + 1 : a.peak; // Put unranked after rank 101
-      const peakB = b.peak === null ? DEFAULT_PEAK_VALUE + 1 : b.peak;
-      if (peakA !== peakB) {
-        return peakA - peakB;
-      }
-      return (b.totalPlays || 0) - (a.totalPlays || 0);
-    });
+//     // Sort by peak ascending (nulls/unranked last), then by total plays descending
+//     artistTracks.sort((a, b) => {
+//       const peakA = a.peak === null ? DEFAULT_PEAK_VALUE + 1 : a.peak; // Put unranked after rank 101
+//       const peakB = b.peak === null ? DEFAULT_PEAK_VALUE + 1 : b.peak;
+//       if (peakA !== peakB) {
+//         return peakA - peakB;
+//       }
+//       return (b.totalPlays || 0) - (a.totalPlays || 0);
+//     });
 
-    return artistTracks.slice(0, 10); // Return top 10
-  }
-);
+//     return artistTracks.slice(0, 10); // Return top 10
+//   }
+// );
 
 /** Selects the first available week's Date object, or null */
 export const selectFirstWeekDate = createSelector(

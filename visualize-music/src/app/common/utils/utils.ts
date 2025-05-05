@@ -1,3 +1,8 @@
+import { compareAsc } from 'date-fns';
+import {
+  HistoryEntry,
+  HistoryGroupedByYear,
+} from '../interfaces/data.interfaces';
 import { RankingWindowUnit } from '../interfaces/settings.interface';
 
 export function craftKey(entityType: string, key: string): string {
@@ -27,4 +32,14 @@ export function calculateDaysFromUnitDuration(
   }
 
   return sizeInDays;
+}
+
+export function historyMapToArray(history: HistoryGroupedByYear) {
+  const historyArray: HistoryEntry[] = [];
+  history.years.forEach((year, key) => {
+    year.weeks.forEach((week, key) => {
+      historyArray.push(week);
+    });
+  });
+  return historyArray.sort((a, b) => compareAsc(a.week, b.week));
 }
