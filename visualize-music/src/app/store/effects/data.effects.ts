@@ -330,110 +330,174 @@ export class DataEffects {
   }
 
   private calculateRanksOptimized(
-    allWeeks: Date[],
+    allWeeks: Date[], // Assumed sorted chronologically
     weeklyCounts: Map<
-      string,
+      string, // weekKey 'YYYY-MM-DD'
       {
         trackCounts: Map<EntityKey, number>;
         artistCounts: Map<EntityKey, number>;
       }
     >,
-    settings: Settings
+    settings: Settings // Expects settings.rankingMode
   ) {
     const tempTrackHistory: Map<
       EntityKey,
-      Array<{ week: Date; rank: number; playsInWindow: number }>
+      Array<{ week: Date; rank: number; playsInWindow: number }> // playsInWindow = plays used for ranking in the specific mode
     > = new Map();
     const tempArtistHistory: Map<
       EntityKey,
       Array<{ week: Date; rank: number; playsInWindow: number }>
     > = new Map();
+
+    // --- State variables for different modes ---
+    // Sliding Window
     const windowTrackPlays: Map<EntityKey, number> = new Map();
     const windowArtistPlays: Map<EntityKey, number> = new Map();
+    // All-Time
     const cumulativeTrackPlays: Map<EntityKey, number> = new Map();
     const cumulativeArtistPlays: Map<EntityKey, number> = new Map();
+    // Year-to-Date
+    const ytdTrackPlays: Map<EntityKey, number> = new Map();
+    const ytdArtistPlays: Map<EntityKey, number> = new Map();
+    let previousYear: number | null = null; // Tracks year changes for YTD reset
 
+    // --- Iterate through each week ---
     allWeeks.forEach((currentWeekDate, weekIndex) => {
       const currentWeekKey = formatDateKey(currentWeekDate);
-      if (!currentWeekKey) return;
+      if (!currentWeekKey) {
+        console.warn(
+          `Skipping week with invalid key for date: ${currentWeekDate}`
+        );
+        return; // Skip if key formatting fails
+      }
+
+      // Get this week's raw counts
       const currentWeekData = weeklyCounts.get(currentWeekKey);
       const currentTrackCounts = currentWeekData?.trackCounts ?? new Map();
       const currentArtistCounts = currentWeekData?.artistCounts ?? new Map();
+
+      // References to the maps used for ranking this week
       let rankedTracksSource: Map<EntityKey, number>;
       let rankedArtistsSource: Map<EntityKey, number>;
 
-      if (settings.isAllTimeMode) {
-        currentTrackCounts.forEach((count, key) =>
-          cumulativeTrackPlays.set(
-            key,
-            (cumulativeTrackPlays.get(key) ?? 0) + count
-          )
-        );
-        currentArtistCounts.forEach((count, key) =>
-          cumulativeArtistPlays.set(
-            key,
-            (cumulativeArtistPlays.get(key) ?? 0) + count
-          )
-        );
-        rankedTracksSource = cumulativeTrackPlays;
-        rankedArtistsSource = cumulativeArtistPlays;
-      } else {
-        currentTrackCounts.forEach((count, key) =>
-          windowTrackPlays.set(key, (windowTrackPlays.get(key) ?? 0) + count)
-        );
-        currentArtistCounts.forEach((count, key) =>
-          windowArtistPlays.set(key, (windowArtistPlays.get(key) ?? 0) + count)
-        );
-        const windowSize = settings.slidingWindowWeeks ?? 1;
-        if (weekIndex >= windowSize) {
-          const leavingWeekDate = allWeeks[weekIndex - windowSize];
-          const leavingWeekKey = formatDateKey(leavingWeekDate);
-          const leavingWeekData = leavingWeekKey
-            ? weeklyCounts.get(leavingWeekKey)
-            : undefined;
-          if (leavingWeekData?.trackCounts) {
-            leavingWeekData.trackCounts.forEach((count, key) => {
-              const newPlays = (windowTrackPlays.get(key) ?? 0) - count;
-              if (newPlays > 0) windowTrackPlays.set(key, newPlays);
-              else windowTrackPlays.delete(key);
-            });
+      // --- Determine ranking logic based on settings.rankingMode ---
+      switch (settings.windowUnit) {
+        case 'all-time':
+          // --- All-Time Calculation ---
+          currentTrackCounts.forEach((count, key) =>
+            cumulativeTrackPlays.set(
+              key,
+              (cumulativeTrackPlays.get(key) ?? 0) + count
+            )
+          );
+          currentArtistCounts.forEach((count, key) =>
+            cumulativeArtistPlays.set(
+              key,
+              (cumulativeArtistPlays.get(key) ?? 0) + count
+            )
+          );
+          // Rank based on the grand total up to this week
+          rankedTracksSource = cumulativeTrackPlays;
+          rankedArtistsSource = cumulativeArtistPlays;
+          break;
+
+        case 'year-to-date':
+          // --- Year-to-Date Calculation ---
+          const currentYear = getYear(currentWeekDate);
+
+          // Check if the year has changed since the last iteration
+          if (currentYear !== previousYear) {
+            // Reset YTD accumulators when crossing into a new year
+            ytdTrackPlays.clear();
+            ytdArtistPlays.clear();
+            previousYear = currentYear; // Update the tracked year
+            // console.log(`YTD: Resetting counts for year ${currentYear}`); // Optional debug log
           }
-          if (leavingWeekData?.artistCounts) {
-            leavingWeekData.artistCounts.forEach((count, key) => {
-              const newPlays = (windowArtistPlays.get(key) ?? 0) - count;
-              if (newPlays > 0) windowArtistPlays.set(key, newPlays);
-              else windowArtistPlays.delete(key);
-            });
+
+          // Add this week's counts to the current year's YTD totals
+          currentTrackCounts.forEach((count, key) =>
+            ytdTrackPlays.set(key, (ytdTrackPlays.get(key) ?? 0) + count)
+          );
+          currentArtistCounts.forEach((count, key) =>
+            ytdArtistPlays.set(key, (ytdArtistPlays.get(key) ?? 0) + count)
+          );
+          // Rank based on the YTD total up to this week within the current year
+          rankedTracksSource = ytdTrackPlays;
+          rankedArtistsSource = ytdArtistPlays;
+          break;
+
+        case 'years':
+        case 'months':
+        case 'weeks':
+        default: // Default to sliding window if mode is unset or invalid
+          // --- Sliding Window Calculation (Optimized version) ---
+          currentTrackCounts.forEach((count, key) =>
+            windowTrackPlays.set(key, (windowTrackPlays.get(key) ?? 0) + count)
+          );
+          currentArtistCounts.forEach((count, key) =>
+            windowArtistPlays.set(
+              key,
+              (windowArtistPlays.get(key) ?? 0) + count
+            )
+          );
+
+          const windowSize = settings.slidingWindowWeeks ?? 1; // Use setting, default 1
+          if (weekIndex >= windowSize) {
+            // Subtract counts from the week leaving the window
+            const leavingWeekDate = allWeeks[weekIndex - windowSize];
+            const leavingWeekKey = formatDateKey(leavingWeekDate);
+            const leavingWeekData = leavingWeekKey
+              ? weeklyCounts.get(leavingWeekKey)
+              : undefined;
+
+            if (leavingWeekData?.trackCounts) {
+              leavingWeekData.trackCounts.forEach((count, key) => {
+                const newPlays = (windowTrackPlays.get(key) ?? 0) - count;
+                if (newPlays > 0) windowTrackPlays.set(key, newPlays);
+                else windowTrackPlays.delete(key); // Remove if zero or less
+              });
+            }
+            if (leavingWeekData?.artistCounts) {
+              leavingWeekData.artistCounts.forEach((count, key) => {
+                const newPlays = (windowArtistPlays.get(key) ?? 0) - count;
+                if (newPlays > 0) windowArtistPlays.set(key, newPlays);
+                else windowArtistPlays.delete(key); // Remove if zero or less
+              });
+            }
           }
-        }
-        rankedTracksSource = windowTrackPlays;
-        rankedArtistsSource = windowArtistPlays;
+          // Rank based on the current window's totals
+          rankedTracksSource = windowTrackPlays;
+          rankedArtistsSource = windowArtistPlays;
+          break;
       }
 
+      // --- Rank and Store Results (Common logic for all modes) ---
       const rankedTracks = Array.from(rankedTracksSource.entries())
-        .sort(([, a], [, b]) => b - a)
-        .slice(0, MAX_LIST_ITEMS);
-      rankedTracks.forEach(([key, plays], index) => {
+        .sort(([, playsA], [, playsB]) => playsB - playsA) // Sort descending by plays
+        .slice(0, MAX_LIST_ITEMS); // Take top N
+
+      rankedTracks.forEach(([key, playsInWindow], index) => {
         if (!tempTrackHistory.has(key)) tempTrackHistory.set(key, []);
         tempTrackHistory.get(key)!.push({
           week: currentWeekDate,
           rank: index + 1,
-          playsInWindow: plays,
+          playsInWindow: playsInWindow, // Store the play count used for ranking
         });
       });
 
       const rankedArtists = Array.from(rankedArtistsSource.entries())
-        .sort(([, a], [, b]) => b - a)
+        .sort(([, playsA], [, playsB]) => playsB - playsA)
         .slice(0, MAX_LIST_ITEMS);
-      rankedArtists.forEach(([key, plays], index) => {
+
+      rankedArtists.forEach(([key, playsInWindow], index) => {
         if (!tempArtistHistory.has(key)) tempArtistHistory.set(key, []);
         tempArtistHistory.get(key)!.push({
           week: currentWeekDate,
           rank: index + 1,
-          playsInWindow: plays,
+          playsInWindow: playsInWindow,
         });
       });
-    });
+    }); // End of allWeeks.forEach
 
     return { tempTrackHistory, tempArtistHistory };
   }

@@ -18,6 +18,11 @@
             <p class="export-container-subtitle">
               Data is cumalitive across all-time
             </p>
+          } @else if (trackingStartDate == "year-to-date") {
+            <p class="export-container-subtitle">
+              Data spans the beginning of {{ currentYear }} to
+              {{ currentWeekDate | date: "longDate" }}
+            </p>
           } @else {
             <p class="export-container-subtitle">
               Data spans from

@@ -31,7 +31,7 @@ import {
   selectWindowUnit,
 } from '../../../../store/selectors/settings.selectors';
 import { RankingWindowUnit } from '../../../../common/interfaces/settings.interface';
-import { subDays } from 'date-fns';
+import { subDays, getYear } from 'date-fns';
 import { calculateDaysFromUnitDuration } from '../../../../common/utils/utils';
 
 interface EnrinchedChartItem extends ChartItem {
@@ -80,6 +80,10 @@ export class ExportChartComponent {
   get currentWeekData() {
     return this._currentWeekData;
   }
+
+  get currentYear(): number {
+    return getYear(this._currentWeekDate);
+  }
   visible: boolean = false;
 
   private readonly store = inject(Store);
@@ -92,11 +96,12 @@ export class ExportChartComponent {
     map(
       ([windowSize, windowUnit]: [number, RankingWindowUnit]):
         | Date
-        | 'all-time' => {
+        | 'all-time'
+        | 'year-to-date' => {
         let sizeInDays = calculateDaysFromUnitDuration(windowUnit, windowSize);
 
-        if (sizeInDays === null) {
-          return 'all-time';
+        if (sizeInDays === 'all-time' || sizeInDays === 'year-to-date') {
+          return sizeInDays;
         }
 
         return subDays(this._currentWeekDate, sizeInDays);

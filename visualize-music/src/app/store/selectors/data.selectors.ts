@@ -4,7 +4,6 @@ import {
   ChartItem,
   EntityKey,
   EntityType,
-  HistoryEntry,
   ProcessedArtistData,
   ProcessedData,
   ProcessedTrackData,
@@ -17,12 +16,12 @@ import {
 import { formatDateKey } from '../../common/utils/date_utils';
 import { DataState } from '../state/data.state'; // Adjust path if needed
 
+import { getYear } from 'date-fns';
 import {
   selectCurrentWeekIndex,
   selectSelectedEntityType,
   selectSelectedHistoryEntity,
 } from './ui.selectors'; // Import relevant UI selectors
-import { getYear } from 'date-fns';
 
 // This encapsulates the logic previously in prepareTop100ListData
 function getListDataForWeek(

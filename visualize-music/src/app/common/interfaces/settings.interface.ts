@@ -1,5 +1,10 @@
 /** Defines the possible units or modes for the ranking calculation window */
-export type RankingWindowUnit = 'weeks' | 'months' | 'years' | 'all-time';
+export type RankingWindowUnit =
+  | 'weeks'
+  | 'months'
+  | 'years'
+  | 'all-time'
+  | 'year-to-date';
 
 /** Represents the user-configurable settings for the application */
 export interface Settings {

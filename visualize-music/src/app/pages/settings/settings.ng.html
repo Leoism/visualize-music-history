@@ -9,10 +9,14 @@
   <h1>Settings</h1>
   <form [formGroup]="formGroup" (ngSubmit)="applySettings()">
     @if (currentSettings$ | async; as currentSettings) {
-      @if (windowUnitFormControl.value != "all-time") {
+      @if (
+        windowUnitFormControl.value != "all-time" &&
+        windowUnitFormControl.value != "year-to-date"
+      ) {
         <div class="form-group">
           <label for="sliding-window-duration">Sliding Window Duration:</label>
           <p-inputnumber
+            [format]="false"
             [class]="
               windowDurationFormControl.errors ? 'ng-invalid ng-dirty' : ''
             "

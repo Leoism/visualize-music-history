@@ -3,6 +3,8 @@ import { Component, DestroyRef, inject, OnInit } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Actions } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
+import { differenceInWeeks } from 'date-fns';
+import { MessageService } from 'primeng/api';
 import { Button } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { InputNumberModule } from 'primeng/inputnumber';
@@ -16,17 +18,15 @@ import {
 import { calculateDaysFromUnitDuration } from '../../common/utils/utils';
 import { applySettings } from '../../store/actions/settings.actions';
 import {
+  selectFirstWeekDate,
+  selectLastWeekDate,
+} from '../../store/selectors/data.selectors';
+import {
   selectExportCount,
   selectWindowDuration,
   selectWindowUnit,
 } from '../../store/selectors/settings.selectors';
 import { AppState } from '../../store/state/app.state';
-import { MessageService } from 'primeng/api';
-import {
-  selectFirstWeekDate,
-  selectLastWeekDate,
-} from '../../store/selectors/data.selectors';
-import { differenceInWeeks } from 'date-fns';
 
 interface SettingsForm {
   windowDuration: FormControl<number>;
@@ -81,7 +81,10 @@ export class SettingsPage implements OnInit {
         windowUnit,
         exportCount,
         isAllTimeMode: windowUnit === 'all-time',
-        slidingWindowWeeks: daysInWeek ? Math.floor(daysInWeek / 7) : null,
+        slidingWindowWeeks:
+          daysInWeek === 'all-time' || daysInWeek === 'year-to-date'
+            ? null
+            : Math.floor(daysInWeek / 7),
       } as Settings;
     })
   );
@@ -90,6 +93,7 @@ export class SettingsPage implements OnInit {
     'months',
     'years',
     'all-time',
+    'year-to-date',
   ];
 
   formGroup!: FormGroup;
@@ -119,7 +123,7 @@ export class SettingsPage implements OnInit {
               formWindowUnitValue,
               control.value
             );
-            if (value === null) {
+            if (value === 'all-time' || value === 'year-to-date') {
               return null; // yolo it idk
             }
             const inWeeks = Math.floor(value / 7);
@@ -183,7 +187,10 @@ export class SettingsPage implements OnInit {
       windowDuration: this.formGroup.value.windowDuration,
       exportCount: this.formGroup.value.exportCount,
       isAllTimeMode: this.formGroup.value.windowUnit === 'all-time',
-      slidingWindowWeeks: daysInWeeks ? Math.floor(daysInWeeks / 7) : null,
+      slidingWindowWeeks:
+        daysInWeeks === 'all-time' || daysInWeeks === 'year-to-date'
+          ? null
+          : Math.floor(daysInWeeks / 7),
     };
 
     if (
