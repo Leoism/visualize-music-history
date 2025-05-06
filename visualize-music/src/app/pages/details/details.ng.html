@@ -35,5 +35,6 @@
     [data]="historicalData$ | async"
     class="h-[30rem]"
     [options]="options"
+    (onDataSelect)="onDataSelect($event)"
   />
 </div>

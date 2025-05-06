@@ -3,17 +3,19 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
+  DestroyRef,
   inject,
   Input,
   OnChanges,
   OnInit,
   SimpleChanges,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { Store } from '@ngrx/store';
+import { ChartData, ChartOptions } from 'chart.js';
 import { compareAsc } from 'date-fns';
 import { ChartModule } from 'primeng/chart';
-import { combineLatest, combineLatestWith, map, Observable, of } from 'rxjs';
+import { combineLatestWith, map, Observable, of } from 'rxjs';
 import {
   EntityKey,
   EntityType,
@@ -23,13 +25,12 @@ import {
   ProcessedTrackData,
 } from '../../common/interfaces/data.interfaces';
 import { formatDateKey } from '../../common/utils/date_utils';
+import { historyMapToArray } from '../../common/utils/utils';
 import {
   selectAllWeeks,
   selectArtistByIdSelectorFactory,
   selectTrackByIdSelectorFactory,
 } from '../../store/selectors/data.selectors';
-import { historyMapToArray } from '../../common/utils/utils';
-import { ChartOptions } from 'chart.js';
 
 interface CondensedArtistDetails {
   name: string;
@@ -70,6 +71,9 @@ interface EnrichedEntityDetails {
 export class DetailsPage implements OnInit, OnChanges {
   private readonly store = inject(Store);
   private readonly changeDetectorRef = inject(ChangeDetectorRef);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly router = inject(Router);
+  private internalAllWeeks?: Date[];
 
   @Input() id: EntityKey = '';
   @Input() entityType?: EntityType;
@@ -78,7 +82,7 @@ export class DetailsPage implements OnInit, OnChanges {
 
   allWeeks$ = this.store.select(selectAllWeeks);
 
-  historicalData$: any;
+  historicalData$?: Observable<ChartData | undefined>;
   options: ChartOptions = {
     maintainAspectRatio: false,
     aspectRatio: 0.6,
@@ -115,6 +119,15 @@ export class DetailsPage implements OnInit, OnChanges {
 
   craftLink(week: string) {
     return ['/charts', week, this.entityType];
+  }
+
+  onDataSelect(point: any) {
+    console.log(point);
+    const lookupIndex = point?.element?.index;
+    if (lookupIndex && this.internalAllWeeks) {
+      const week = formatDateKey(this.internalAllWeeks[lookupIndex]);
+      this.router.navigate(['/charts', week, this.entityType]);
+    }
   }
 
   private initializeEntityObservable(): void {
@@ -156,6 +169,12 @@ export class DetailsPage implements OnInit, OnChanges {
     } else {
       this.enrichedEntity$ = of(undefined);
     }
+    const sub = this.allWeeks$?.subscribe((data) => {
+      this.internalAllWeeks = data;
+    });
+    this.destroyRef.onDestroy(() => {
+      sub?.unsubscribe();
+    });
   }
 
   private createBaseEnrichedDetails(
@@ -190,7 +209,7 @@ export class DetailsPage implements OnInit, OnChanges {
   private craftChartJsData(
     entity: EnrichedEntityDetails | undefined,
     allWeeks: Date[]
-  ) {
+  ): ChartData | undefined {
     if (!entity) {
       return;
     }
