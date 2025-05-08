@@ -1,17 +1,4 @@
 <div class="page-controls">
-  <div class="control-group">
-    <label for="entityType">Show List:</label>
-    <p-select
-      class="entity-type-select"
-      [checkmark]="true"
-      [options]="options"
-      (onChange)="updateEntityType($event)"
-      [(ngModel)]="selectedEntityType"
-    >
-      <option value="tracks" selected>Top Tracks</option>
-      <option value="artists">Top Artists</option>
-    </p-select>
-  </div>
   <div class="control-group week-nav-group">
     <p-button
       label="< Prev"
@@ -50,10 +37,6 @@
           [currentWeekDate]="currentWeek"
         ></app-export-chart>
       }
-      <a routerLink="/settings" class="p-button font-bold">
-        <i class="pi pi-cog"></i>
-        Settings
-      </a>
     </div>
   }
 </div>

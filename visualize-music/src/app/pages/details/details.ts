@@ -31,6 +31,7 @@ import {
   selectArtistByIdSelectorFactory,
   selectTrackByIdSelectorFactory,
 } from '../../store/selectors/data.selectors';
+import { Card } from 'primeng/card';
 
 interface CondensedArtistDetails {
   name: string;
@@ -63,7 +64,7 @@ interface EnrichedEntityDetails {
 
 @Component({
   selector: 'app-details-page',
-  imports: [AsyncPipe, RouterLink, ChartModule],
+  imports: [AsyncPipe, RouterLink, ChartModule, Card],
   templateUrl: './details.ng.html',
   styleUrls: ['details.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -24,3 +24,14 @@
 .search-bar {
   width: 100%;
 }
+
+:host ::ng-deep .search-menu-bar.p-menubar .p-menubar-end {
+  display: block;
+  flex-basis: 90%;
+  flex-shrink: 0;
+  max-width: 600px;
+
+  @media (min-width: 640px) {
+    flex-basis: 40%;
+  }
+}

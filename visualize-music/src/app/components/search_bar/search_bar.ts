@@ -6,17 +6,19 @@ import {
 } from '@angular/core';
 
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
 import { Store } from '@ngrx/store';
+import { MenuItem } from 'primeng/api';
 import {
   AutoComplete,
   AutoCompleteCompleteEvent,
   AutoCompleteSelectEvent,
 } from 'primeng/autocomplete';
+import { Menubar } from 'primeng/menubar';
 import { EntityKey, EntityType } from '../../common/interfaces/data.interfaces';
+import { updateSelectedEntityType } from '../../store/actions/ui.actions';
 import { selectProcessedData } from '../../store/selectors/data.selectors';
-import { FormsModule } from '@angular/forms';
-import { Button } from 'primeng/button';
-import { Router } from '@angular/router';
 
 interface SearchSuggestion {
   key: EntityKey;
@@ -28,7 +30,7 @@ interface SearchSuggestion {
   selector: 'app-search-bar',
   templateUrl: './search_bar.ng.html',
   styleUrls: ['./search_bar.scss'],
-  imports: [CommonModule, AutoComplete, FormsModule, Button],
+  imports: [CommonModule, AutoComplete, FormsModule, Menubar, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
 })
@@ -39,6 +41,29 @@ export class SearchBarComponent {
 
   private readonly processedData$ = this.store.select(selectProcessedData);
 
+  menuItems: MenuItem[] = [
+    {
+      label: 'Artists',
+      icon: 'pi pi-user',
+      command: () => {
+        this.store.dispatch(
+          updateSelectedEntityType({ entityType: 'artists' })
+        );
+      },
+    },
+    {
+      label: 'Tracks',
+      icon: 'pi pi-headphones',
+      command: () => {
+        this.store.dispatch(updateSelectedEntityType({ entityType: 'tracks' }));
+      },
+    },
+    {
+      label: 'Settings',
+      icon: 'pi pi-cog',
+      routerLink: ['/settings'],
+    },
+  ];
   filteredItems: SearchSuggestion[] = [];
   items: SearchSuggestion[] = [];
   selectedItem: SearchSuggestion | undefined;

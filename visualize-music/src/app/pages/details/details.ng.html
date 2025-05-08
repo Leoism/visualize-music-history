@@ -1,40 +1,44 @@
-@if (enrichedEntity$ | async; as entity) {
-  <div class="quick-overview">
-    <span class="quick-item"
-      ><strong>Total Plays:</strong> {{ entity.totalPlays }}</span
-    >
-    <span class="quick-item"></span>
-    <span class="quick-item"><strong>Peak: </strong>{{ entity.peakedAt }}</span>
-    <span class="quick-item">
-      <strong>Peak Week: </strong>
-      <a [routerLink]="craftLink(entity.peakWeek)">{{ entity.peakWeek }}</a>
-    </span>
-    <span class="quick-item"
-      ><strong>First Played:</strong> {{ entity.firstPlayedOn }}</span
-    >
-    <span class="quick-item">
-      <strong>First Charted: </strong>
-      <a [routerLink]="craftLink(entity.firstChartedOn)">{{
-        entity.firstChartedOn
-      }}</a>
-    </span>
-    <span class="quick-item"
-      ><strong>Last Played:</strong> {{ entity.lastPlayedOn }}</span
-    >
-    <span class="quick-item">
-      <strong>Last Charted: </strong>
-      <a [routerLink]="craftLink(entity.lastChartedOn)">{{
-        entity.lastChartedOn
-      }}</a>
-    </span>
+<p-card [style]="{ 'max-width': '900px', margin: '0 auto' }">
+  @if (enrichedEntity$ | async; as entity) {
+    <div class="quick-overview">
+      <span class="quick-item"
+        ><strong>Total Plays:</strong> {{ entity.totalPlays }}</span
+      >
+      <span class="quick-item"></span>
+      <span class="quick-item"
+        ><strong>Peak: </strong>{{ entity.peakedAt }}</span
+      >
+      <span class="quick-item">
+        <strong>Peak Week: </strong>
+        <a [routerLink]="craftLink(entity.peakWeek)">{{ entity.peakWeek }}</a>
+      </span>
+      <span class="quick-item"
+        ><strong>First Played:</strong> {{ entity.firstPlayedOn }}</span
+      >
+      <span class="quick-item">
+        <strong>First Charted: </strong>
+        <a [routerLink]="craftLink(entity.firstChartedOn)">{{
+          entity.firstChartedOn
+        }}</a>
+      </span>
+      <span class="quick-item"
+        ><strong>Last Played:</strong> {{ entity.lastPlayedOn }}</span
+      >
+      <span class="quick-item">
+        <strong>Last Charted: </strong>
+        <a [routerLink]="craftLink(entity.lastChartedOn)">{{
+          entity.lastChartedOn
+        }}</a>
+      </span>
+    </div>
+  }
+  <div class="history-chart">
+    <p-chart
+      type="line"
+      [data]="historicalData$ | async"
+      class="h-[30rem]"
+      [options]="options"
+      (onDataSelect)="onDataSelect($event)"
+    />
   </div>
-}
-<div class="history-chart">
-  <p-chart
-    type="line"
-    [data]="historicalData$ | async"
-    class="h-[30rem]"
-    [options]="options"
-    (onDataSelect)="onDataSelect($event)"
-  />
-</div>
+</p-card>

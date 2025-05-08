@@ -12,7 +12,7 @@ import { Store } from '@ngrx/store';
 import { parseISO } from 'date-fns';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
-import { SelectChangeEvent, SelectModule } from 'primeng/select';
+import { SelectModule } from 'primeng/select';
 import { combineLatestWith, map } from 'rxjs';
 import {
   ChartItem,
@@ -23,7 +23,6 @@ import {
   nextWeekRequest,
   prevWeekRequest,
 } from '../../../store/actions/controls.actions';
-import { updateSelectedEntityType } from '../../../store/actions/ui.actions';
 import {
   selectAllWeeks,
   selectCurrentWeekDateString,
@@ -139,20 +138,6 @@ export class ControlsComponent {
     } else {
       this.store.dispatch(prevWeekRequest());
     }
-  }
-
-  updateEntityType(event: SelectChangeEvent) {
-    console.log(event);
-    if (event.value !== 'tracks' && event.value !== 'artists') {
-      console.error('Invalid entity type selected:', event.value);
-      return;
-    }
-    const selectedValue = event.value as EntityType;
-
-    // Dispatch an action to update the entity type in the store
-    this.store.dispatch(
-      updateSelectedEntityType({ entityType: selectedValue })
-    );
   }
 
   toDate(date: string) {

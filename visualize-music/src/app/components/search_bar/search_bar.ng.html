@@ -1,28 +1,51 @@
-<div class="flex items-center gap-2 search-container">
-  <p-autocomplete
-    class="search-bar"
-    [(ngModel)]="selectedItem"
-    [virtualScroll]="true"
-    [suggestions]="filteredItems"
-    [virtualScrollItemSize]="34"
-    (completeMethod)="handleSearchInput($event)"
-    optionLabel="display"
-    size="large"
-    [fluid]="true"
-    (onSelect)="onSelect($event)"
-    placeholder="Search Track or Artist History..."
+<div [style]="{ width: '100%' }">
+  <p-menubar
+    [model]="menuItems"
+    styleClass="search-menu-bar"
+    [style]="{
+      width: '100%',
+    }"
   >
-    <ng-template let-item #item>
-      <div class="flex items-center gap-2">
-        <div class="suggestion-type">
-          {{ item.type === "artists" ? "[Artist]" : "[Track]" }}
+    <ng-template #item let-item let-root="root">
+      @if (!item.routerLink) {
+        <div class="flex items-center p-menubar-item-link">
+          <span [class]="item.icon"></span>
+          <span class="ml-2">{{ item.label }}</span>
         </div>
-        <div>{{ item.display }}</div>
-        @if (item.type === "tracks") {
-          <div class="suggestion-artist">- {{ item.artist }}</div>
-        }
-      </div>
+      } @else {
+        <a [routerLink]="item.routerLink" class="p-menubar-item-link">
+          <span [class]="item.icon"></span>
+          <span class="ml-2">{{ item.label }}</span>
+        </a>
+      }
     </ng-template>
-  </p-autocomplete>
-  <p-button [size]="'large'" [icon]="'pi pi-search'"></p-button>
+    <ng-template #end>
+      <p-autocomplete
+        styleClass="search-bar"
+        class="search-bar"
+        [(ngModel)]="selectedItem"
+        [virtualScroll]="true"
+        [suggestions]="filteredItems"
+        [virtualScrollItemSize]="34"
+        (completeMethod)="handleSearchInput($event)"
+        optionLabel="display"
+        size="small"
+        [fluid]="true"
+        (onSelect)="onSelect($event)"
+        placeholder="Search Track or Artist History..."
+      >
+        <ng-template let-item #item>
+          <div class="flex items-center gap-2">
+            <div class="suggestion-type">
+              {{ item.type === "artists" ? "[Artist]" : "[Track]" }}
+            </div>
+            <div>{{ item.display }}</div>
+            @if (item.type === "tracks") {
+              <div class="suggestion-artist">- {{ item.artist }}</div>
+            }
+          </div>
+        </ng-template>
+      </p-autocomplete>
+    </ng-template>
+  </p-menubar>
 </div>
